@@ -1,0 +1,36 @@
+name: ci
+on:
+  push: { branches: [main] }
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - name: Guard against TypeScript files
+        run: npm run guard:ts
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run validate:openapi
+      # Build BEFORE test -- CDK construct unit tests instantiate the stack,
+      # which uses Code.fromAsset('dist'), so dist/ must exist on disk.
+      - run: npm run build
+      - run: npm test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 14
+      - name: Validate smoke-test script syntax
+        run: node --check scripts/smoke-test.js
+      - run: npm run audit
+      - run: npm run cdk:synth
+        env:
+          STAGE: dev

@@ -1,0 +1,41 @@
+name: smoke-test
+
+on:
+  workflow_call:
+    inputs:
+      base_url:
+        description: Base URL to run smoke tests against
+        required: true
+        type: string
+      strict:
+        description: Fail on degraded health/ready
+        required: false
+        type: boolean
+        default: true
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: Base URL to run smoke tests against (e.g. https://api.staging.example.com)
+        required: true
+        type: string
+      strict:
+        description: Fail on degraded health/ready
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run smoke tests
+        run: node scripts/smoke-test.js ${{ inputs.strict && '--strict' || '' }}
+        env:
+          SMOKE_BASE_URL: ${{ inputs.base_url }}

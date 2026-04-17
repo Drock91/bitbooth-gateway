@@ -1,0 +1,63 @@
+{
+  "name": "x402",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Agent & machine payments on XRPL EVM Sidechain via x402, with OWS wallets and multi-exchange fiat onramping.",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "build": "node scripts/build.js",
+    "lint": "eslint . --max-warnings=0",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
+    "test:integration": "vitest run --config vitest.integration.config.js",
+    "cdk:synth": "cdk synth --app 'node infra/app.js'",
+    "cdk:diff": "cdk diff --app 'node infra/app.js'",
+    "cdk:deploy": "cdk deploy --app 'node infra/app.js' --require-approval never",
+    "cdk:deploy:staging": "STAGE=staging cdk deploy --app 'node infra/app.js' --require-approval broadening",
+    "cdk:deploy:prod": "STAGE=prod cdk deploy --app 'node infra/app.js' --require-approval broadening",
+    "validate:openapi": "node scripts/validate-openapi.js",
+    "guard:ts": "node scripts/ts-guard.js",
+    "audit": "npm audit --audit-level=high",
+    "smoke-test": "node scripts/smoke-test.js",
+    "load-test": "k6 run scripts/load-test.js",
+    "agent:start": "node scripts/agent/tick-start.js",
+    "agent:end": "node scripts/agent/tick-end.js",
+    "prepare": "husky"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.637.0",
+    "@aws-sdk/client-secrets-manager": "^3.637.0",
+    "@aws-sdk/lib-dynamodb": "^3.637.0",
+    "@mozilla/readability": "^0.6.0",
+    "@solana/web3.js": "^1.98.4",
+    "ethers": "^6.13.0",
+    "linkedom": "^0.18.12",
+    "pino": "^9.3.0",
+    "turndown": "^7.2.4",
+    "viem": "^2.47.18",
+    "xrpl": "^4.6.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.4",
+    "aws-cdk": "^2.150.0",
+    "aws-cdk-lib": "^2.150.0",
+    "constructs": "^10.3.0",
+    "esbuild": "^0.28.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "husky": "^9.0.0",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.3.0",
+    "vitest": "^4.1.4"
+  },
+  "lint-staged": {
+    "*.js": "eslint --max-warnings=0"
+  }
+}

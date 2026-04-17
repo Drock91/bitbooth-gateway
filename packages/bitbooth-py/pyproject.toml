@@ -1,0 +1,62 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bitbooth"
+version = "1.0.0"
+description = "Pay-per-fetch Python client for BitBooth Fetch (x402 protocol). Fetch any URL, pay USDC on Base, get clean markdown."
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "BitBooth", email = "hello@bitbooth.io" }]
+requires-python = ">=3.9"
+dependencies = [
+    "requests>=2.28",
+    "eth-account>=0.10",
+    "web3>=6.11",
+]
+keywords = [
+    "x402",
+    "agent",
+    "agent-payments",
+    "payments",
+    "usdc",
+    "base",
+    "fetch",
+    "markdown",
+    "crewai",
+    "langchain",
+    "claude-agent-sdk",
+    "bitbooth",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.urls]
+Homepage = "https://bitbooth.io/fetch"
+Repository = "https://github.com/bitbooth/x402"
+Issues = "https://github.com/bitbooth/x402/issues"
+
+[project.optional-dependencies]
+dev = ["pytest>=7", "pytest-mock>=3"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+bitbooth = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

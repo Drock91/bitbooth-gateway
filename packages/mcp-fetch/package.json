@@ -1,0 +1,67 @@
+{
+  "name": "@bitbooth/mcp-fetch",
+  "version": "1.0.0",
+  "mcpName": "io.github.drock91/bitbooth-fetch",
+  "description": "MCP server for pay-per-fetch via x402. Exposes a fetch(url, mode) tool that pays with USDC on Base and returns markdown.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Derek Heinrichs",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Drock91/BitBooth.git",
+    "directory": "packages/mcp-fetch"
+  },
+  "homepage": "https://github.com/Drock91/BitBooth/tree/main/packages/mcp-fetch",
+  "bugs": {
+    "url": "https://github.com/Drock91/BitBooth/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "bin": {
+    "mcp-fetch": "./bin/mcp-fetch.js"
+  },
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./server": "./src/server.js",
+    "./x402-client": "./src/x402-client.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "server.json",
+    "README.md"
+  ],
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "x402",
+    "fetch",
+    "agent",
+    "agent-payments",
+    "payments",
+    "usdc",
+    "base",
+    "markdown",
+    "web-scraping",
+    "claude",
+    "anthropic"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "ethers": "^6.13.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "vitest": "^4.0.0"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  }
+}

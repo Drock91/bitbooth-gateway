@@ -1,0 +1,11 @@
+node_modules/
+dist/
+cdk.out/
+cdk-outputs-*.json
+coverage/
+.env
+.env.local
+.env.autopilot
+.agent/last-tick.log
+.DS_Store
+*.log

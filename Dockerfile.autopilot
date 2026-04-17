@@ -1,0 +1,66 @@
+# syntax=docker/dockerfile:1.6
+# x402 Autopilot — long-running container that ticks the agent loop hourly.
+# Uses Claude Code CLI authenticated with the host's ~/.claude credentials
+# (mounted as a volume), so it rides on the user's Pro/Max subscription and
+# incurs no API token charges.
+
+FROM node:20-bookworm-slim
+
+# Base tools: git for commits, tini for clean PID 1, ca-certs for TLS,
+# python3 just in case a native build needs it, gh for supervisor issue escalation.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      git \
+      openssh-client \
+      tini \
+      ca-certificates \
+      curl \
+      python3 \
+      build-essential \
+      gnupg \
+ && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+      | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
+ && chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
+ && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+      > /etc/apt/sources.list.d/github-cli.list \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends gh \
+ && rm -rf /var/lib/apt/lists/*
+
+# Install Claude Code CLI globally.
+RUN npm install -g @anthropic-ai/claude-code@latest
+
+# Non-root user so commits/credentials don't land as root on the host volume.
+# The node:20 base image already has a `node` user at UID 1000 — remove it
+# first, then create our `autopilot` user at the host's UID/GID.
+ARG USER_UID=1000
+ARG USER_GID=1000
+RUN userdel -r node 2>/dev/null || true \
+ && groupdel node 2>/dev/null || true \
+ && groupadd --gid ${USER_GID} autopilot \
+ && useradd  --uid ${USER_UID} --gid ${USER_GID} --create-home --shell /bin/bash autopilot
+
+WORKDIR /workspace
+
+# Entrypoint shell script drives the tick loop.
+COPY docker/autopilot-entrypoint.sh /usr/local/bin/autopilot-entrypoint.sh
+COPY docker/secret-scan.sh /usr/local/bin/secret-scan.sh
+# Strip Windows CRLF line endings (git on Windows autocrlf may have converted
+# LF → CRLF on checkout, which breaks the bash shebang `#!/usr/bin/env bash\r`).
+RUN sed -i 's/\r$//' /usr/local/bin/autopilot-entrypoint.sh /usr/local/bin/secret-scan.sh \
+ && chmod +x /usr/local/bin/autopilot-entrypoint.sh /usr/local/bin/secret-scan.sh
+
+# Defaults — override via docker-compose env.
+ENV AUTOPILOT_INTERVAL_HOURS=1 \
+    AUTOPILOT_MAX_MINUTES=15 \
+    AUTOPILOT_BRANCH=x402-api-gateway \
+    AUTOPILOT_MODEL=claude-opus-4-6 \
+    AGENT_AUTO_PUSH=false \
+    GIT_AUTHOR_NAME="x402 autopilot" \
+    GIT_AUTHOR_EMAIL="autopilot@x402.local" \
+    GIT_COMMITTER_NAME="x402 autopilot" \
+    GIT_COMMITTER_EMAIL="autopilot@x402.local"
+
+USER autopilot
+
+ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/autopilot-entrypoint.sh"]

@@ -1,0 +1,67 @@
+name: fetch-nightly
+
+on:
+  schedule:
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 10
+    concurrency:
+      group: fetch-nightly
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: autopilot
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-2
+
+      - name: Run fetch smoke test
+        id: smoke
+        run: |
+          node scripts/smoke/fetch-smoke.js > smoke-result.json 2> smoke-stderr.log
+          cat smoke-stderr.log >&2
+          echo "result=$(cat smoke-result.json | jq -c .)" >> "$GITHUB_OUTPUT"
+        env:
+          STAGING_URL: ${{ vars.STAGING_BASE_URL }}
+          API_KEY: ${{ secrets.SMOKE_API_KEY }}
+          ACCOUNT_ID: ${{ vars.SMOKE_ACCOUNT_ID }}
+          AWS_REGION: us-east-2
+
+      - name: Patch NORTH_STAR counters
+        run: node scripts/smoke/patch-fetch-north-star.js --file smoke-result.json
+
+      - name: Commit counter bump
+        run: |
+          git config user.name "x402 autopilot"
+          git config user.email "noreply@x402.org"
+          git add .agent/NORTH_STAR.json
+          git diff --cached --quiet && echo "no changes to commit" && exit 0
+          git commit -m "chore(north-star): bump fetch counters from nightly regression
+
+          txHash: ${{ fromJSON(steps.smoke.outputs.result).txHash }}
+          blockNumber: ${{ fromJSON(steps.smoke.outputs.result).blockNumber }}
+          targetUrl: ${{ fromJSON(steps.smoke.outputs.result).targetUrl }}
+
+          Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
+          git push origin autopilot

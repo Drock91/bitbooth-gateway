@@ -1,0 +1,49 @@
+name: npm-publish
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/mcp-fetch/**'
+      - '.changeset/**'
+
+concurrency:
+  group: npm-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          registry-url: 'https://registry.npmjs.org'
+
+      - run: npm ci
+      # mcp-fetch is a separate npm package with its own deps (no root workspaces).
+      # Install + test it explicitly.
+      - run: npm ci --prefix packages/mcp-fetch
+      - run: npm test --prefix packages/mcp-fetch
+
+      - name: Publish to npm
+        run: npm publish --provenance
+        working-directory: packages/mcp-fetch
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Install mcp-publisher
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+
+      - name: Authenticate to MCP Registry
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish to MCP Registry
+        run: ./mcp-publisher publish
+        working-directory: packages/mcp-fetch

@@ -1,0 +1,131 @@
+# x402 Autopilot — hourly ticks using Claude Code + Pro subscription.
+#
+# Usage:
+#   docker compose -f docker-compose.autopilot.yml up -d --build
+#   docker compose -f docker-compose.autopilot.yml logs -f
+#   docker compose -f docker-compose.autopilot.yml down
+#
+# The container mounts:
+#   - ./ (this repo) as /workspace so commits land on your real filesystem
+#   - ~/.claude (host Claude Code credentials) read-only so auth rides on your Pro plan
+#   - ~/.gitconfig read-only so commits attribute correctly if you want
+#
+# Dashboard: http://localhost:4020
+# Kill switch: `docker compose -f docker-compose.autopilot.yml stop`
+
+services:
+  autopilot:
+    build:
+      context: .
+      dockerfile: Dockerfile.autopilot
+      args:
+        # Match host UID/GID so committed files aren't owned by root on the host.
+        USER_UID: '${UID:-1000}'
+        USER_GID: '${GID:-1000}'
+    image: x402-autopilot:latest
+    container_name: x402-autopilot
+    restart: unless-stopped
+    working_dir: /workspace
+    # Host-only env overrides (NTFY_TOPIC, etc). Not committed to git.
+    # .env.autopilot holds AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY / AWS_REGION
+    # so the container can run `cdk deploy` and hit AWS APIs. Gitignored.
+    env_file:
+      - path: .env
+        required: false
+      - path: .env.autopilot
+        required: false
+    environment:
+      # STEADY-STATE MODE — 60m interval to rest the Pro-plan rate-limit
+      # window. Rapid iter is only used when host-side patches need to
+      # verify fast (drop to '5' + '10' temporarily when debugging).
+      AUTOPILOT_INTERVAL_MINUTES: '5'
+      AUTOPILOT_MAX_MINUTES: '25'
+      AUTOPILOT_BRANCH: 'x402-api-gateway'
+      AUTOPILOT_MODEL: 'claude-opus-4-6'
+      # Push every tick to origin/autopilot so progress is saved to GitHub.
+      AGENT_AUTO_PUSH: 'true'
+      # Auto-accept GitHub's host key on first connect (avoids interactive prompt).
+      GIT_SSH_COMMAND: 'ssh -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/home/autopilot/.ssh/known_hosts'
+      # Optional: tell the agent/tick scripts about session tagging.
+      AGENT_SESSION_TAG: 'docker-autopilot'
+      # Supervisor — detects polish loops and halts the agent for human guidance.
+      SUPERVISOR_WINDOW: '5'
+      SUPERVISOR_COV_MIN: '90'
+      SUPERVISOR_COV_DELTA: '0.5'
+      AUTOPILOT_STUCK_CHECK_MINUTES: '15'
+      # Flip to 'true' once a GH_TOKEN is mounted/exported in the container.
+      GH_AUTOPILOT_ISSUES: 'false'
+    volumes:
+      # The repo itself.
+      - type: bind
+        source: .
+        target: /workspace
+      # Claude Code host credentials.
+      #
+      # ~/.claude/ (session state dir) is mounted RW — harmless shared state.
+      #
+      # ~/.claude.json is mounted READ-ONLY at a SIDE PATH. The host's
+      # interactive Claude Code session writes to ~/.claude.json constantly,
+      # and if the container shared that exact file the canary_check would
+      # catch it mid-write and fail with "Configuration error ... at position
+      # 44735". The entrypoint copies this side-path file to the container's
+      # own writable .claude.json at startup so the container has its own
+      # stable copy that the host process can't corrupt.
+      - type: bind
+        source: ${HOME}/.claude
+        target: /home/autopilot/.claude
+      - type: bind
+        source: ${HOME}/.claude.json
+        target: /home/autopilot/.claude.json.host
+        read_only: true
+      # Gitconfig passthrough removed — we set GIT_AUTHOR_NAME/EMAIL via env
+      # vars instead, and the read-only mount collides with safe.directory writes.
+      # SSH keys read-only — lets the container push to origin/autopilot using
+      # the same key your host uses for git@github.com.
+      - type: bind
+        source: ${HOME}/.ssh
+        target: /home/autopilot/.ssh
+        read_only: true
+    # Resource caps so an idle container stays tiny and a runaway tick can't
+    # eat the host.
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+    # Basic healthcheck: container is healthy if the entrypoint process is alive.
+    # NOTE: the minimal base image has no procps (no ps/pgrep), so we scan
+    # /proc/*/cmdline directly for the entrypoint script name. At least one
+    # match = alive. The grep process itself also matches (its own argv
+    # contains the literal), which is fine — it just guarantees exit 0 while
+    # the container is running, and it costs nothing.
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'grep -lF autopilot-entrypoint.sh /proc/[0-9]*/cmdline >/dev/null 2>&1 || exit 1',
+        ]
+      interval: 5m
+      timeout: 10s
+      retries: 3
+
+  dashboard:
+    image: node:20-bookworm-slim
+    container_name: x402-dashboard
+    restart: unless-stopped
+    working_dir: /workspace
+    command: node dashboard/server.js
+    environment:
+      WORKSPACE: '/workspace'
+      DASHBOARD_PORT: '4020'
+    volumes:
+      - type: bind
+        source: .
+        target: /workspace
+    ports:
+      - '4020:4020'
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M

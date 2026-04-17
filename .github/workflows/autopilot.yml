@@ -1,0 +1,83 @@
+name: autopilot
+on:
+  schedule:
+    # Every 4 hours (UTC). ~6 ticks/day.
+    - cron: '0 */4 * * *'
+  workflow_dispatch:
+    inputs:
+      goalId:
+        description: 'Specific goal ID to work on (optional)'
+        required: false
+
+permissions:
+  contents: write # commit + push to autopilot branch
+  pull-requests: write # optional: open PRs to main
+
+concurrency:
+  group: autopilot
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: autopilot
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Verify repo is green before tick
+        run: |
+          npm run lint
+          npm run build
+          npm test
+
+      - name: Print current state
+        run: npm run agent:start
+
+      # ------------------------------------------------------------
+      # Call Claude via Anthropic API to execute ONE tick.
+      # Requires secret ANTHROPIC_API_KEY in repo settings.
+      # The Claude Agent SDK reads .agent/CLAUDE_LOOP.md and executes.
+      # ------------------------------------------------------------
+      - name: Run Claude tick
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GOAL_ID: ${{ inputs.goalId }}
+        run: |
+          npx -y @anthropic-ai/claude-agent-sdk@latest tick \
+            --prompt-file .agent/CLAUDE_LOOP.md \
+            --workdir . \
+            --model claude-opus-4-6 \
+            --max-minutes 15 \
+            ${GOAL_ID:+--goal "$GOAL_ID"}
+
+      - name: Verify repo is green after tick
+        run: |
+          npm run lint
+          npm run build
+          npm test
+
+      - name: Update state snapshot
+        run: npm run agent:end -- --tag=autopilot
+
+      - name: Commit tick
+        run: |
+          git config user.name "x402-autopilot"
+          git config user.email "autopilot@x402.local"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "nothing changed, idle tick"
+            exit 0
+          fi
+          git commit -m "tick: autopilot run $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push origin autopilot

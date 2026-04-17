@@ -1,0 +1,43 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.drock91/bitbooth-fetch",
+  "description": "Pay-per-fetch MCP server for AI agents. Fetches any URL and returns clean markdown. Payments handled automatically via x402 — 0.005 USDC on Base Sepolia per fetch (testnet by default; set BITBOOTH_CHAIN_ID=8453 for Base mainnet). No API keys, no signup, no accounts — the agent's wallet pays per call.",
+  "repository": {
+    "url": "https://github.com/Drock91/BitBooth",
+    "source": "github"
+  },
+  "version": "1.0.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@bitbooth/mcp-fetch",
+      "version": "1.0.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "BITBOOTH_AGENT_KEY",
+          "description": "Hex-encoded private key for the agent wallet that pays USDC. Testnet by default (Base Sepolia) — set BITBOOTH_CHAIN_ID=8453 to use Base mainnet.",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": true
+        },
+        {
+          "name": "BITBOOTH_API_URL",
+          "description": "BitBooth gateway URL. Defaults to the staging endpoint on Base Sepolia.",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "BITBOOTH_CHAIN_ID",
+          "description": "EVM chain ID. Defaults to 84532 (Base Sepolia testnet). Set to 8453 for Base mainnet (spends real USDC).",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        }
+      ]
+    }
+  ]
+}

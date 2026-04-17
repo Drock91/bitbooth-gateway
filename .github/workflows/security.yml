@@ -1,0 +1,21 @@
+name: security
+on:
+  pull_request:
+  schedule:
+    - cron: '0 6 * * 1'
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: npm }
+      - run: npm ci
+      - name: Dependency audit (high+)
+        run: npm audit --audit-level=high
+      - name: Secret scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          extra_args: --only-verified

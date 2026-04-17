@@ -1,0 +1,59 @@
+{
+  "name": "@bitbooth/langchain",
+  "version": "1.0.0",
+  "description": "LangChain tool for pay-per-fetch via x402. Exposes BitBoothFetchTool that pays USDC on Base and returns markdown.",
+  "type": "module",
+  "license": "MIT",
+  "author": "BitBooth <hello@bitbooth.io>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bitbooth/x402.git",
+    "directory": "packages/langchain-bitbooth"
+  },
+  "homepage": "https://bitbooth.io/fetch",
+  "bugs": {
+    "url": "https://github.com/bitbooth/x402/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./tool": "./src/tool.js",
+    "./x402-client": "./src/x402-client.js"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "keywords": [
+    "langchain",
+    "langchain-tool",
+    "x402",
+    "agent",
+    "agent-payments",
+    "payments",
+    "usdc",
+    "base",
+    "fetch",
+    "markdown",
+    "web-scraping",
+    "bitbooth"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@langchain/core": "^0.3.0",
+    "ethers": "^6.13.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "vitest": "^4.0.0"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  }
+}

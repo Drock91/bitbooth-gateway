@@ -1,0 +1,1837 @@
+openapi: 3.0.3
+info:
+  title: x402
+  version: 0.10.0
+  description: |
+    Agent/machine payments via HTTP 402 on Base mainnet (USDC).
+
+    ## API Versioning
+    Every response includes an `X-API-Version` header with the current API
+    version (semver). Deprecated endpoints additionally return `Deprecation: true`,
+    an optional `Sunset` date, and a `Link` header pointing to the successor.
+
+    ## Authentication
+    Most endpoints require an `X-API-Key` header. Obtain one by signing up via
+    `POST /dashboard/signup`.
+
+    ## x402 Payment Flow
+    1. Client calls a paywalled resource.
+    2. Server returns **402** with a challenge in `WWW-Authenticate: X402`.
+    3. Client submits payment on-chain and re-requests with an `X-PAYMENT` header
+       containing `nonce`, `txHash`, and `signature`.
+    4. Server verifies the tx (2-block confirmation for micropayments) and grants access.
+
+    ## Rate Limiting
+    Requests are rate-limited per tenant based on subscription plan.
+    Every rate-limited response (both **429** and successful) includes standard
+    `RateLimit-Limit`, `RateLimit-Remaining`, and `RateLimit-Reset` headers.
+
+    | Plan | Tokens / min | Refill rate |
+    |------|-------------|-------------|
+    | free | 10 | ~0.17/s |
+    | starter | 100 | ~1.67/s |
+    | growth | 500 | ~8.33/s |
+    | scale | 2000 | ~33.33/s |
+
+    Plan capacities are configurable via `RATE_LIMIT_<PLAN>_CAPACITY` env vars.
+    When the bucket is exhausted the server responds with **429** and a
+    `Retry-After` header.
+
+    ## Security Headers
+    Every response includes the following security headers:
+    - `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload`
+    - `X-Frame-Options: DENY`
+    - `X-Content-Type-Options: nosniff`
+    - `Referrer-Policy: strict-origin-when-cross-origin`
+    - `Permissions-Policy: camera=(), microphone=(), geolocation=()`
+    - `Content-Security-Policy: default-src 'none'` (JSON responses only)
+
+    ## Body Size Limit
+    All endpoints enforce a **100 KB** request body limit. Requests exceeding
+    this limit receive a **413 Payload Too Large** response.
+
+servers:
+  - url: https://api.example.com/{stage}
+    variables:
+      stage:
+        default: dev
+        enum: [dev, staging, prod]
+
+tags:
+  - name: public
+    description: Unauthenticated landing + docs + demo signup
+  - name: core
+    description: Health and paywalled resource endpoints
+  - name: quotes
+    description: Fiat-to-crypto quote aggregation
+  - name: dashboard
+    description: Tenant self-service dashboard (HTML)
+  - name: webhooks
+    description: Inbound webhook sinks (exchange + Stripe)
+  - name: admin
+    description: Operational admin endpoints (require X-ADMIN-KEY header)
+
+paths:
+  /:
+    get:
+      tags: [public]
+      summary: Landing page (HTML)
+      operationId: getLanding
+      description: |
+        Marketing landing page with product pitch, demo-signup form, and
+        pricing tiers. Rendered server-side from a static template; no
+        auth, no cookies.
+      responses:
+        '200':
+          description: Landing HTML
+          content:
+            text/html:
+              schema: { type: string }
+
+  /fetch:
+    get:
+      tags: [public]
+      summary: Fetch product landing page (HTML)
+      operationId: getFetch
+      description: |
+        Landing page for BitBooth Fetch — pay-per-scrape for AI agents.
+        Features interactive demo, SDK code snippets (curl, JavaScript,
+        Python, LangChain, crewAI, Claude Agent SDK), pricing, and
+        multi-chain payment details. No auth required.
+      responses:
+        '200':
+          description: Fetch landing HTML
+          content:
+            text/html:
+              schema: { type: string }
+
+  /docs:
+    get:
+      tags: [public]
+      summary: Interactive API docs (Swagger UI)
+      operationId: getDocs
+      description: |
+        Swagger UI loaded from unpkg.com, pointed at `/openapi.yaml`.
+        Supports "Try it out" for authenticated routes if the user pastes
+        an API key.
+      responses:
+        '200':
+          description: Swagger UI HTML
+          content:
+            text/html:
+              schema: { type: string }
+
+  /openapi.yaml:
+    get:
+      tags: [public]
+      summary: Raw OpenAPI 3.0 spec
+      operationId: getOpenapiYaml
+      description: |
+        Returns this document as text/yaml. Cached for 5 minutes. Served
+        with `Access-Control-Allow-Origin: *` so third-party tools can
+        consume it cross-origin.
+      responses:
+        '200':
+          description: The openapi.yaml document
+          content:
+            application/yaml:
+              schema: { type: string }
+
+  /demo/signup:
+    post:
+      tags: [public]
+      summary: Claim a free demo API key
+      operationId: postDemoSignup
+      description: |
+        Creates a free-tier tenant and returns a fresh API key. IP-rate-
+        limited to 5 signups per hour. Email is captured for outreach but
+        not verified. This is the landing-page funnel for new users.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  maxLength: 254
+                  example: you@company.com
+      responses:
+        '200':
+          description: Demo key created
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [accountId, apiKey, plan, docsUrl, dashboardUrl, message]
+                properties:
+                  accountId: { type: string, format: uuid }
+                  apiKey: { type: string, example: 'x402_...' }
+                  plan: { type: string, example: free }
+                  docsUrl: { type: string, example: /docs }
+                  dashboardUrl: { type: string, example: /dashboard?accountId=... }
+                  message: { type: string }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /v1/health:
+    get:
+      tags: [core]
+      summary: Health check
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service is healthy
+          headers:
+            X-API-Version:
+              $ref: '#/components/headers/X-API-Version'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  stage:
+                    type: string
+                    example: dev
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /v1/health/ready:
+    get:
+      tags: [core]
+      summary: Deep readiness check
+      operationId: getHealthReady
+      description: |
+        Verifies DynamoDB connectivity, Secrets Manager access, and chain RPC
+        reachability. Returns 200 when all subsystems are healthy, 503 otherwise.
+      responses:
+        '200':
+          description: All subsystems healthy
+          headers:
+            X-API-Version:
+              $ref: '#/components/headers/X-API-Version'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthReadyResponse'
+        '503':
+          description: One or more subsystems unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthReadyResponse'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /v1/quote:
+    post:
+      tags: [quotes]
+      summary: Best fiat-to-crypto quote across exchanges
+      operationId: postQuote
+      security: [{ ApiKeyAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteRequest'
+      responses:
+        '200':
+          description: Best available quote
+          headers:
+            X-API-Version:
+              $ref: '#/components/headers/X-API-Version'
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuoteResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '502':
+          $ref: '#/components/responses/UpstreamError'
+
+  /v1/resource:
+    post:
+      tags: [core]
+      summary: Access an x402-paywalled resource
+      operationId: postResource
+      description: |
+        If no valid payment header is present the server returns **402** with an
+        x402 challenge. Re-request with the `X-PAYMENT` header after settling on-chain.
+      security: [{ ApiKeyAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/XPayment'
+      responses:
+        '200':
+          description: Paid access granted
+          headers:
+            X-API-Version:
+              $ref: '#/components/headers/X-API-Version'
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResourceResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          description: Payment required — x402 challenge issued
+          headers:
+            WWW-Authenticate:
+              schema:
+                type: string
+                example: X402
+              description: Always `X402` for x402 challenges
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentChallenge'
+        '403':
+          $ref: '#/components/responses/FraudDetected'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /v1/fetch:
+    post:
+      tags: [core]
+      summary: Fetch and scrape a URL, returning cleaned Markdown
+      operationId: postFetch
+      description: |
+        Pay-per-scrape endpoint for AI agents. Fetches the given URL, extracts
+        article content via Mozilla Readability (full mode) or raw HTML (fast mode),
+        and converts to Markdown via Turndown. Price: $0.005 USDC per request.
+
+        This endpoint is x402-paywalled. On first request, the server returns
+        **402** with a multi-chain challenge. The client pays on Base (EVM) or
+        Solana, then re-requests with `X-PAYMENT` header to receive the scraped
+        content.
+      security: [{ ApiKeyAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/XPayment'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FetchRequest'
+            example:
+              url: https://example.com/article
+              mode: full
+      responses:
+        '200':
+          description: Scraped content returned as Markdown
+          headers:
+            X-API-Version:
+              $ref: '#/components/headers/X-API-Version'
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FetchResponse'
+              example:
+                title: Example Article
+                markdown: '# Hello\n\nSome content.'
+                metadata:
+                  url: https://example.com/article
+                  fetchedAt: '2026-04-15T00:00:00.000Z'
+                  contentLength: 1234
+                  truncated: false
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          description: Payment required — x402 multi-chain challenge issued
+          headers:
+            WWW-Authenticate:
+              schema:
+                type: string
+                example: X402
+              description: Always `X402` for x402 challenges
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentChallenge'
+        '403':
+          $ref: '#/components/responses/FraudDetected'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '502':
+          description: Upstream fetch failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: UPSTREAM_ERROR
+                message: Upstream fetch failed
+
+  /v1/resource/premium:
+    post:
+      tags: [core]
+      summary: Access a premium x402-paywalled resource (2x price)
+      operationId: postResourcePremium
+      description: |
+        Premium variant of `/v1/resource` with higher pricing (2x base price).
+        Follows the same x402 challenge flow — returns **402** when no valid
+        payment header is present.
+      security: [{ ApiKeyAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/XPayment'
+      responses:
+        '200':
+          description: Paid access granted
+          headers:
+            X-API-Version:
+              $ref: '#/components/headers/X-API-Version'
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResourceResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          description: Payment required — x402 challenge issued
+          headers:
+            WWW-Authenticate:
+              schema:
+                type: string
+                example: X402
+              description: Always `X402` for x402 challenges
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentChallenge'
+        '403':
+          $ref: '#/components/responses/FraudDetected'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /v1/resource/bulk:
+    post:
+      tags: [core]
+      summary: Batch access to x402-paywalled resources (max 10 items)
+      operationId: postResourceBulk
+      description: |
+        Accepts a batch of work items. Total price = unit price × item count.
+        Maximum 10 items per request. Returns **402** when no valid payment
+        header is present, with `amountWei` reflecting the total batch price.
+      security: [{ ApiKeyAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/XPayment'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkRequest'
+            example:
+              items:
+                - id: doc-001
+                - id: doc-002
+                - id: doc-003
+      responses:
+        '200':
+          description: All items processed successfully
+          headers:
+            X-API-Version:
+              $ref: '#/components/headers/X-API-Version'
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkResourceResponse'
+              example:
+                ok: true
+                txHash: '0xabc123...'
+                resource: /v1/resource/bulk
+                accountId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                items:
+                  - id: doc-001
+                    status: completed
+                  - id: doc-002
+                    status: completed
+                  - id: doc-003
+                    status: completed
+                totalItems: 3
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          description: Payment required — x402 challenge issued (amount = unit × count)
+          headers:
+            WWW-Authenticate:
+              schema:
+                type: string
+                example: X402
+              description: Always `X402` for x402 challenges
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentChallenge'
+        '403':
+          $ref: '#/components/responses/FraudDetected'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /v1/payments:
+    get:
+      tags: [core]
+      summary: List payment history for the authenticated tenant
+      operationId: getPayments
+      security: [{ ApiKeyAuth: [] }]
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Number of payments to return per page
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            type: string
+          description: Opaque pagination cursor from a previous response's nextCursor
+      responses:
+        '200':
+          description: Paginated list of payments
+          headers:
+            X-API-Version:
+              $ref: '#/components/headers/X-API-Version'
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentsHistoryResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /v1/demo/relay:
+    post:
+      tags: [core]
+      summary: Live demo Base Sepolia transfer (public, unauth, IP-rate-limited)
+      description: >-
+        Public landing-page demo endpoint. Submits a real on-chain Base Sepolia
+        transfer (1 wei) from the agent wallet to a freshly-generated
+        ephemeral receiver. Used by the bitbooth.html Race Mode card so a
+        visitor can watch a real ETH settlement next to XRPL/Solana/Stellar.
+        Per-IP rate limit of 1 request per 60 seconds.
+      operationId: postDemoRelay
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+      responses:
+        '200':
+          description: Real on-chain transfer confirmed
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  [chain, chainId, hash, blockNumber, gasUsed, from, to, valueWei, explorerUrl]
+                properties:
+                  chain: { type: string }
+                  chainId: { type: integer }
+                  hash: { type: string }
+                  blockNumber: { type: integer }
+                  gasUsed: { type: string }
+                  from: { type: string }
+                  to: { type: string }
+                  receiverAddr: { type: string }
+                  valueWei: { type: string }
+                  explorerUrl: { type: string }
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /v1/webhooks/{provider}:
+    post:
+      tags: [webhooks]
+      summary: Exchange webhook sink
+      operationId: postExchangeWebhook
+      description: |
+        Receives callbacks from exchange/onramp providers. The handler verifies
+        the provider-specific HMAC/signature before processing.
+      parameters:
+        - in: path
+          name: provider
+          required: true
+          schema:
+            type: string
+            enum: [moonpay, coinbase, kraken, binance, uphold]
+      responses:
+        '200':
+          description: Webhook accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/webhooks/stripe:
+    post:
+      tags: [webhooks]
+      summary: Stripe subscription webhook
+      operationId: postStripeWebhook
+      description: |
+        Receives Stripe subscription lifecycle events
+        (`customer.subscription.created`, `updated`, `deleted`). Signature is
+        verified via the `Stripe-Signature` header before any processing.
+      parameters:
+        - in: header
+          name: Stripe-Signature
+          required: true
+          schema:
+            type: string
+          description: Stripe webhook signature for HMAC verification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StripeSubscriptionEvent'
+      responses:
+        '200':
+          description: Event processed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  action:
+                    type: string
+                    example: plan_updated
+                  plan:
+                    type: string
+                    enum: [starter, growth, scale]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /admin:
+    get:
+      tags: [admin]
+      summary: Admin login page
+      operationId: getAdmin
+      description: Renders the admin login HTML form.
+      responses:
+        '200':
+          description: HTML login page
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /admin/login:
+    post:
+      tags: [admin]
+      summary: Authenticate admin
+      operationId: postAdminLogin
+      description: |
+        Validates admin key, sets HMAC-signed session cookie, redirects to
+        /admin/tenants. Session idle timeout is 15 minutes (sliding).
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password:
+                  type: string
+                  minLength: 1
+                  maxLength: 256
+      responses:
+        '303':
+          description: Redirect to admin dashboard on success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /admin/logout:
+    get:
+      tags: [admin]
+      summary: Admin logout
+      operationId: getAdminLogout
+      description: Clears admin session cookie and redirects to login page.
+      responses:
+        '303':
+          description: Redirect to login page
+
+  /admin/tenants:
+    get:
+      tags: [admin]
+      summary: List all tenants (admin)
+      operationId: getAdminTenants
+      description: |
+        Returns a paginated list of all tenants. Optionally filter by subscription
+        plan. Requires the `X-ADMIN-KEY` header with a valid admin API key.
+      security: [{ AdminKeyAuth: [] }]
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Number of tenants to return per page
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            type: string
+            minLength: 1
+          description: Opaque pagination cursor from a previous response's nextCursor
+        - in: query
+          name: plan
+          required: false
+          schema:
+            type: string
+            enum: [free, starter, growth, scale]
+          description: Filter tenants by subscription plan
+      responses:
+        '200':
+          description: Paginated list of tenants
+          headers:
+            X-API-Version:
+              $ref: '#/components/headers/X-API-Version'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminTenantsResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /admin/tenants/ui:
+    get:
+      tags: [admin]
+      summary: Admin tenants HTML page
+      operationId: listTenantsUI
+      description: |
+        Renders an HTML page with a paginated tenants table, plan filter,
+        suspend/reactivate actions. Requires an authenticated admin session cookie.
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: plan
+          required: false
+          schema:
+            type: string
+            enum: [free, starter, growth, scale]
+      responses:
+        '200':
+          description: HTML tenants management page
+          content:
+            text/html:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /admin/metrics/ui:
+    get:
+      tags: [admin]
+      summary: Admin metrics dashboard
+      operationId: getAdminMetricsUI
+      description: |
+        Renders an HTML metrics dashboard showing MRR, paying tenants,
+        total 402s issued, USDC settled, fraud event counts (24h/7d/30d),
+        and top 10 tenants by payment volume. Data is cached for 5 minutes
+        in Lambda memory. Requires an authenticated admin session cookie.
+      responses:
+        '200':
+          description: HTML metrics dashboard page
+          content:
+            text/html:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /dashboard:
+    get:
+      tags: [dashboard]
+      summary: Dashboard page
+      operationId: getDashboard
+      description: |
+        Serves the HTML dashboard UI. Optionally pass `accountId` to display
+        recent payments for that tenant.
+      parameters:
+        - in: query
+          name: accountId
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: Tenant account ID to look up payments
+      responses:
+        '200':
+          description: HTML dashboard page
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /dashboard/routes:
+    get:
+      tags: [dashboard]
+      summary: List routes for the authenticated tenant
+      operationId: getRoutes
+      security: [{ ApiKeyAuth: [] }]
+      responses:
+        '200':
+          description: List of tenant routes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  routes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RouteItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      tags: [dashboard]
+      summary: Create or update a route
+      operationId: putRoute
+      description: |
+        Creates a new route or updates an existing one for the authenticated tenant.
+        The route `path` is the unique key — if a route with the same path already
+        exists it will be updated, otherwise a new route is created.
+      security: [{ ApiKeyAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRouteInput'
+      responses:
+        '200':
+          description: Route created or updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RouteItem'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+    delete:
+      tags: [dashboard]
+      summary: Delete a route
+      operationId: deleteRoute
+      security: [{ ApiKeyAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [path]
+              properties:
+                path:
+                  type: string
+                  pattern: ^\/
+                  description: Route path to delete
+      responses:
+        '200':
+          description: Route deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Route not found
+
+  /dashboard/rotate-key:
+    post:
+      tags: [dashboard]
+      summary: Rotate tenant API key
+      operationId: postRotateKey
+      description: |
+        Generates a new API key for the authenticated tenant, invalidating the
+        previous key immediately. The new key is returned **once** in the response
+        body — store it securely. Subsequent requests must use the new key.
+      security: [{ ApiKeyAuth: [] }]
+      responses:
+        '200':
+          description: New API key issued
+          headers:
+            X-API-Version:
+              $ref: '#/components/headers/X-API-Version'
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RotateKeyResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /dashboard/signup:
+    post:
+      tags: [dashboard]
+      summary: Create a new tenant account
+      operationId: postSignup
+      description: |
+        Creates a new free-tier tenant and returns the account ID and API key.
+        The API key is shown only once — store it immediately.
+      responses:
+        '200':
+          description: HTML page with account credentials
+          content:
+            text/html:
+              schema:
+                type: string
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          description: Signup failed
+
+  /portal:
+    get:
+      tags: [portal]
+      summary: Client portal sign-in page
+      operationId: getPortal
+      description: Renders the HTML login form for the client portal.
+      responses:
+        '200':
+          description: HTML login page
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /portal/login:
+    post:
+      tags: [portal]
+      summary: Authenticate and create session
+      operationId: postPortalLogin
+      description: |
+        Accepts email and API key via form POST. On success, sets an
+        HMAC-signed session cookie (HttpOnly, Secure, SameSite=Strict,
+        15-min expiry) and redirects to /portal/dashboard.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [email, apiKey]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  maxLength: 320
+                apiKey:
+                  type: string
+                  minLength: 1
+                  maxLength: 256
+            example:
+              email: tenant@example.com
+              apiKey: x402_abc123...
+      responses:
+        '303':
+          description: Redirect to /portal/dashboard with session cookie set
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+            Location:
+              schema:
+                type: string
+                example: /portal/dashboard
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          description: Invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /portal/logout:
+    get:
+      tags: [portal]
+      summary: Clear session and redirect to login
+      operationId: getPortalLogout
+      description: Clears the session cookie and redirects to /portal.
+      responses:
+        '303':
+          description: Redirect to /portal with session cookie cleared
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+            Location:
+              schema:
+                type: string
+                example: /portal
+
+  /portal/dashboard:
+    get:
+      tags: [portal]
+      summary: Authenticated client portal dashboard
+      operationId: getPortalDashboard
+      description: |
+        Cookie-gated dashboard showing the signed-in tenant's plan, usage,
+        rate-limit state, last 20 payments, configured routes, and API key
+        reveal/rotate controls. Requires a valid `x402_session` cookie.
+      responses:
+        '200':
+          description: HTML dashboard page
+          content:
+            text/html:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /portal/integrate:
+    get:
+      tags: [portal]
+      summary: Integration guide with tabbed code samples
+      operationId: getPortalIntegrate
+      description: |
+        Cookie-gated page showing step-by-step x402 integration instructions
+        with tabbed code samples (curl, JavaScript, Python). The signed-in
+        tenant's account ID and plan are rendered in the page. Requires a
+        valid `x402_session` cookie.
+      responses:
+        '200':
+          description: HTML integration guide page
+          content:
+            text/html:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /portal/rotate-key:
+    post:
+      tags: [portal]
+      summary: Rotate API key via session cookie
+      operationId: postPortalRotateKey
+      description: |
+        Rotates the signed-in tenant's API key using session cookie auth.
+        Returns the new key in the response body. The old key is immediately
+        invalidated. Requires a valid `x402_session` cookie.
+      responses:
+        '200':
+          description: New API key generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RotateKeyResponse'
+              example:
+                accountId: 550e8400-e29b-41d4-a716-446655440000
+                apiKey: x402_newkey123...
+                message: API key rotated. Save this key now — it will not be shown again.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+    AdminKeyAuth:
+      type: apiKey
+      in: header
+      name: X-ADMIN-KEY
+      description: Admin API key for operational endpoints
+
+  headers:
+    X-API-Version:
+      description: Current API version (semver). Present on every response.
+      schema:
+        type: string
+        example: '1.0.0'
+    Deprecation:
+      description: Set to `true` when an endpoint is deprecated.
+      schema:
+        type: string
+        example: 'true'
+    Sunset:
+      description: ISO 8601 date when a deprecated endpoint will be removed.
+      schema:
+        type: string
+        example: '2026-12-31'
+    RateLimit-Limit:
+      description: Maximum tokens in the tenant's bucket (per plan tier).
+      schema:
+        type: integer
+        example: 100
+    RateLimit-Remaining:
+      description: Tokens remaining in the current window.
+      schema:
+        type: integer
+        example: 87
+    RateLimit-Reset:
+      description: Seconds until the next token is added.
+      schema:
+        type: integer
+        example: 6
+
+  parameters:
+    XPayment:
+      in: header
+      name: X-PAYMENT
+      required: false
+      description: |
+        JSON-encoded payment proof: `{"nonce":"...","txHash":"0x...","signature":"..."}`.
+        Required on the second request after receiving a 402 challenge.
+      schema:
+        type: string
+
+  responses:
+    ValidationError:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: VALIDATION_ERROR
+              message: Invalid request
+              details:
+                - path: [fiatAmount]
+                  message: Expected number, received string
+            correlationId: 550e8400-e29b-41d4-a716-446655440000
+
+    Unauthorized:
+      description: Missing or invalid API key / webhook signature
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: UNAUTHORIZED
+              message: Unauthorized
+            correlationId: 550e8400-e29b-41d4-a716-446655440000
+
+    RateLimited:
+      description: Rate limit exceeded
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds until the next token is available
+        RateLimit-Limit:
+          $ref: '#/components/headers/RateLimit-Limit'
+        RateLimit-Remaining:
+          $ref: '#/components/headers/RateLimit-Remaining'
+        RateLimit-Reset:
+          $ref: '#/components/headers/RateLimit-Reset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: RATE_LIMITED
+              message: Too many requests
+              details:
+                retryAfter: 5
+            correlationId: 550e8400-e29b-41d4-a716-446655440000
+
+    FraudDetected:
+      description: Request blocked by fraud detection
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: FRAUD_DETECTED
+              message: Fraudulent activity detected
+              details:
+                eventType: high_velocity
+            correlationId: 550e8400-e29b-41d4-a716-446655440000
+
+    PayloadTooLarge:
+      description: Request body exceeds the 100 KB size limit
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: VALIDATION_ERROR
+              message: Request body too large
+              details:
+                maxBytes: 102400
+            correlationId: 550e8400-e29b-41d4-a716-446655440000
+
+    UpstreamError:
+      description: Upstream exchange or chain provider failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: UPSTREAM_ERROR
+              message: Upstream coinbase failed
+            correlationId: 550e8400-e29b-41d4-a716-446655440000
+
+  schemas:
+    FetchRequest:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          format: uri
+          description: URL to fetch and scrape
+          example: https://example.com/article
+        mode:
+          type: string
+          enum: [fast, full]
+          default: fast
+          description: fast = raw HTML→Markdown; full = Readability article extraction
+
+    FetchResponse:
+      type: object
+      required: [title, markdown, metadata]
+      properties:
+        title:
+          type: string
+          description: Article title (empty in fast mode or when Readability returns null)
+        markdown:
+          type: string
+          description: Cleaned Markdown content
+        metadata:
+          $ref: '#/components/schemas/FetchMetadata'
+
+    FetchMetadata:
+      type: object
+      required: [url, fetchedAt, contentLength, truncated]
+      properties:
+        url:
+          type: string
+          format: uri
+        fetchedAt:
+          type: string
+          format: date-time
+        contentLength:
+          type: integer
+          minimum: 0
+        truncated:
+          type: boolean
+          description: True when body exceeded 2MB cap
+
+    HealthCheckResult:
+      type: object
+      required: [name, ok, latencyMs]
+      properties:
+        name:
+          type: string
+          example: dynamodb
+        ok:
+          type: boolean
+          example: true
+        latencyMs:
+          type: number
+          example: 12
+        error:
+          type: string
+          example: DDB unreachable
+
+    HealthReadyResponse:
+      type: object
+      required: [ok, stage, checks]
+      properties:
+        ok:
+          type: boolean
+          example: true
+        stage:
+          type: string
+          example: dev
+        checks:
+          type: array
+          items:
+            $ref: '#/components/schemas/HealthCheckResult'
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              enum:
+                - VALIDATION_ERROR
+                - UNAUTHORIZED
+                - PAYMENT_REQUIRED
+                - NOT_FOUND
+                - CONFLICT
+                - RATE_LIMITED
+                - FRAUD_DETECTED
+                - UPSTREAM_ERROR
+                - INTERNAL_ERROR
+            message:
+              type: string
+            details:
+              description: Additional context (Zod issues, retry-after, etc.)
+        correlationId:
+          type: string
+          format: uuid
+
+    AdminTenantsResponse:
+      type: object
+      properties:
+        tenants:
+          type: array
+          items:
+            $ref: '#/components/schemas/TenantItem'
+        nextCursor:
+          type: string
+          nullable: true
+          description: Opaque cursor for the next page, or null if no more results
+
+    PaymentsHistoryResponse:
+      type: object
+      properties:
+        payments:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentItem'
+        nextCursor:
+          type: string
+          nullable: true
+          description: Opaque cursor for the next page, or null if no more results
+
+    PaymentItem:
+      type: object
+      properties:
+        idempotencyKey:
+          type: string
+        accountId:
+          type: string
+          format: uuid
+        amountWei:
+          type: string
+          pattern: ^\d+$
+        assetSymbol:
+          type: string
+        txHash:
+          type: string
+          pattern: ^0x[a-fA-F0-9]{64}$
+        blockNumber:
+          type: integer
+        status:
+          type: string
+          enum: [confirmed]
+        createdAt:
+          type: string
+          format: date-time
+        confirmedAt:
+          type: string
+          format: date-time
+
+    QuoteRequest:
+      type: object
+      required: [fiatCurrency, fiatAmount, cryptoAsset]
+      properties:
+        fiatCurrency:
+          type: string
+          enum: [USD, EUR, GBP]
+        fiatAmount:
+          type: number
+          minimum: 0
+          exclusiveMinimum: true
+          maximum: 50000
+        cryptoAsset:
+          type: string
+          enum: [USDC, XRP, ETH]
+        exchange:
+          type: string
+          enum: [moonpay, coinbase, kraken, binance, uphold]
+          description: Pin to a specific exchange (optional)
+
+    QuoteResponse:
+      type: object
+      properties:
+        exchange:
+          type: string
+        fiatCurrency:
+          type: string
+        fiatAmount:
+          type: number
+        cryptoAsset:
+          type: string
+        cryptoAmount:
+          type: string
+        rate:
+          type: number
+
+    ResourceResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          example: true
+        txHash:
+          type: string
+          pattern: ^0x[a-fA-F0-9]{64}$
+          example: '0xabc123...'
+        resource:
+          type: string
+          example: /v1/resource
+        accountId:
+          type: string
+          format: uuid
+
+    BulkRequest:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          maxItems: 10
+          items:
+            type: object
+            required: [id]
+            properties:
+              id:
+                type: string
+                minLength: 1
+                maxLength: 256
+
+    BulkResourceResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          example: true
+        txHash:
+          type: string
+          pattern: ^0x[a-fA-F0-9]{64}$
+          example: '0xabc123...'
+        resource:
+          type: string
+          example: /v1/resource/bulk
+        accountId:
+          type: string
+          format: uuid
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              status:
+                type: string
+                enum: [completed]
+        totalItems:
+          type: integer
+          minimum: 1
+          maximum: 10
+
+    PaymentChallenge:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: PAYMENT_REQUIRED
+            message:
+              type: string
+              example: Payment required
+        challenge:
+          type: object
+          description: |
+            x402 challenge with multi-chain `accepts` array. Clients pick
+            the chain they want to pay on and submit the tx hash with an
+            optional CAIP-2 `network` field in the X-PAYMENT header.
+          required: [nonce, expiresAt, resource, accepts]
+          properties:
+            nonce:
+              type: string
+              minLength: 16
+              maxLength: 64
+              description: One-time nonce — reuse is rejected
+            expiresAt:
+              type: integer
+              description: Unix timestamp (seconds) when the challenge expires
+              example: 1713225600
+            resource:
+              type: string
+              example: /v1/resource
+            accepts:
+              type: array
+              minItems: 1
+              description: |
+                Payment options the server will accept. Each entry describes
+                one chain+asset pair using CAIP-2 network identifiers.
+              items:
+                $ref: '#/components/schemas/AcceptEntry'
+            amountWei:
+              type: string
+              pattern: ^\d+$
+              description: Legacy field — prefer accepts[].amount
+            assetSymbol:
+              type: string
+              example: USDC
+              description: Legacy field — prefer accepts[].asset
+            payTo:
+              type: string
+              description: Legacy field — prefer accepts[].payTo
+            chainId:
+              type: integer
+              description: Legacy field — prefer accepts[].network
+              example: 8453
+        correlationId:
+          type: string
+          format: uuid
+      example:
+        error:
+          code: PAYMENT_REQUIRED
+          message: Payment required
+        challenge:
+          nonce: a1b2c3d4e5f6g7h8i9j0k1l2
+          expiresAt: 1713225600
+          resource: /v1/resource
+          accepts:
+            - scheme: exact
+              network: 'eip155:8453'
+              payTo: '0x6Eb83C70a71c81BE7Fc13F0d711A28736a9E37Fc'
+              asset: 'USDC@0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+              amount: '10000'
+            - scheme: exact
+              network: 'solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1'
+              payTo: 'SolanaWalletAddressHere'
+              asset: 'USDC@EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
+              amount: '10000'
+          amountWei: '10000'
+          assetSymbol: USDC
+          payTo: '0x6Eb83C70a71c81BE7Fc13F0d711A28736a9E37Fc'
+          chainId: 8453
+        correlationId: 550e8400-e29b-41d4-a716-446655440000
+
+    AcceptEntry:
+      type: object
+      required: [scheme, network, payTo, asset, amount]
+      description: |
+        A single payment option describing chain, recipient, asset, and amount.
+        Uses CAIP-2 network identifiers for cross-chain compatibility.
+      properties:
+        scheme:
+          type: string
+          enum: [exact]
+          description: Payment scheme — currently only "exact" (full amount)
+        network:
+          type: string
+          description: |
+            CAIP-2 network identifier: `eip155:<chainId>` for EVM chains,
+            `solana:<genesisHash>` for Solana.
+          example: 'eip155:8453'
+        payTo:
+          type: string
+          description: Recipient address on the target chain
+          example: '0x6Eb83C70a71c81BE7Fc13F0d711A28736a9E37Fc'
+        asset:
+          type: string
+          description: 'Asset in `SYMBOL@contractAddress` format'
+          example: 'USDC@0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+        amount:
+          type: string
+          pattern: ^\d+$
+          description: Payment amount in the asset's smallest unit (e.g. wei for USDC on EVM)
+
+    PaymentHeader:
+      type: object
+      required: [nonce, txHash, signature]
+      properties:
+        nonce:
+          type: string
+          minLength: 16
+          maxLength: 64
+        txHash:
+          type: string
+          description: |
+            Transaction reference — EVM hex hash (`0x` + 64 hex chars) or
+            Solana base58 signature (64-88 chars).
+        signature:
+          type: string
+          minLength: 1
+        network:
+          type: string
+          description: |
+            CAIP-2 network the payment was made on (e.g. `eip155:8453`).
+            Defaults to the server's primary EVM chain if omitted.
+          example: 'eip155:8453'
+
+    TenantItem:
+      type: object
+      properties:
+        accountId:
+          type: string
+          format: uuid
+        apiKeyHash:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        stripeCustomerId:
+          type: string
+        plan:
+          type: string
+          enum: [free, starter, growth, scale]
+        createdAt:
+          type: string
+          format: date-time
+
+    RouteItem:
+      type: object
+      properties:
+        tenantId:
+          type: string
+          format: uuid
+        path:
+          type: string
+          pattern: ^\/
+        priceWei:
+          type: string
+          pattern: ^\d+$
+        asset:
+          type: string
+          enum: [USDC]
+        fraudRules:
+          $ref: '#/components/schemas/FraudRules'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    FraudRules:
+      type: object
+      properties:
+        maxAmountWei:
+          type: string
+          pattern: ^\d+$
+        velocityPerMinute:
+          type: integer
+          minimum: 1
+
+    UpdateRouteInput:
+      type: object
+      required: [path, priceWei]
+      properties:
+        path:
+          type: string
+          pattern: ^\/
+          minLength: 1
+          maxLength: 512
+          description: Route path (must start with /)
+        priceWei:
+          type: string
+          pattern: ^\d+$
+          description: Price in wei as a string
+        asset:
+          type: string
+          enum: [USDC]
+          default: USDC
+        fraudRules:
+          $ref: '#/components/schemas/FraudRules'
+
+    RotateKeyResponse:
+      type: object
+      required: [accountId, apiKey, message]
+      properties:
+        accountId:
+          type: string
+          format: uuid
+        apiKey:
+          type: string
+          description: >
+            New API key prefixed with `x402_`. Shown only once — store it
+            immediately. The previous key is invalidated.
+          example: x402_abc123...
+        message:
+          type: string
+          example: API key rotated. Save this key now — it will not be shown again.
+
+    StripeSubscriptionEvent:
+      type: object
+      required: [id, type, data]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum:
+            - customer.subscription.created
+            - customer.subscription.updated
+            - customer.subscription.deleted
+        data:
+          type: object
+          required: [object]
+          properties:
+            object:
+              type: object
+              required: [id, customer, status, items]
+              properties:
+                id:
+                  type: string
+                customer:
+                  type: string
+                status:
+                  type: string
+                items:
+                  type: object
+                  properties:
+                    data:
+                      type: array
+                      minItems: 1
+                      items:
+                        type: object
+                        properties:
+                          price:
+                            type: object
+                            properties:
+                              lookup_key:
+                                type: string
+                                enum:
+                                  - price_starter_monthly
+                                  - price_growth_monthly
+                                  - price_scale_monthly
