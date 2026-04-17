@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 describe('routes/index.js', () => {
   let matchRoute;
-  let postQuote;
   let requirePaidResource;
   let getPayments;
   let getHealth;
@@ -10,11 +9,12 @@ describe('routes/index.js', () => {
   let listTenants;
   let requireBulkResource;
   let postDemoRelay;
+  let getEarningsHtml;
+  let getEarningsJson;
 
   beforeEach(async () => {
     vi.resetModules();
 
-    postQuote = vi.fn().mockResolvedValue({ statusCode: 200 });
     requirePaidResource = vi.fn().mockResolvedValue({ statusCode: 200 });
     requireBulkResource = vi.fn().mockResolvedValue({ statusCode: 200 });
     getPayments = vi.fn().mockResolvedValue({ statusCode: 200 });
@@ -22,10 +22,9 @@ describe('routes/index.js', () => {
     getHealthReady = vi.fn().mockResolvedValue({ statusCode: 200 });
     listTenants = vi.fn().mockResolvedValue({ statusCode: 200 });
     postDemoRelay = vi.fn().mockResolvedValue({ statusCode: 200 });
+    getEarningsHtml = vi.fn().mockResolvedValue({ statusCode: 200 });
+    getEarningsJson = vi.fn().mockResolvedValue({ statusCode: 200 });
 
-    vi.doMock('../../src/controllers/quote.controller.js', () => ({
-      postQuote,
-    }));
     vi.doMock('../../src/controllers/payments.controller.js', () => ({
       requirePaidResource,
       requireBulkResource,
@@ -37,6 +36,10 @@ describe('routes/index.js', () => {
     }));
     vi.doMock('../../src/controllers/admin.controller.js', () => ({
       listTenants,
+    }));
+    vi.doMock('../../src/controllers/earnings.controller.js', () => ({
+      getEarningsHtml,
+      getEarningsJson,
     }));
     vi.doMock('../../src/controllers/demo-relay.controller.js', () => ({
       postDemoRelay,
@@ -50,9 +53,9 @@ describe('routes/index.js', () => {
   });
 
   describe('matchRoute', () => {
-    it('returns postQuote handler for POST /v1/quote', () => {
+    it('does NOT route POST /v1/quote (unrouted; exchange adapters were stubs)', () => {
       const handler = matchRoute({ httpMethod: 'POST', path: '/v1/quote' });
-      expect(handler).toBe(postQuote);
+      expect(handler).toBeUndefined();
     });
 
     it('returns requirePaidResource handler for POST /v1/resource', () => {
@@ -128,6 +131,16 @@ describe('routes/index.js', () => {
       const handler = matchRoute({ httpMethod: 'POST', path: '/v1/demo/relay' });
       expect(handler).toBe(postDemoRelay);
     });
+
+    it('returns getEarningsHtml handler for GET /admin/earnings', () => {
+      const handler = matchRoute({ httpMethod: 'GET', path: '/admin/earnings' });
+      expect(handler).toBe(getEarningsHtml);
+    });
+
+    it('returns getEarningsJson handler for GET /admin/earnings.json', () => {
+      const handler = matchRoute({ httpMethod: 'GET', path: '/admin/earnings.json' });
+      expect(handler).toBe(getEarningsJson);
+    });
   });
 
   describe('GET /v1/health handler', () => {
@@ -138,10 +151,9 @@ describe('routes/index.js', () => {
   });
 
   describe('route table completeness', () => {
-    it('has exactly 9 registered routes', () => {
+    it('has exactly 10 registered routes', () => {
       const methods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'];
       const paths = [
-        '/v1/quote',
         '/v1/resource',
         '/v1/resource/premium',
         '/v1/resource/bulk',
@@ -151,6 +163,8 @@ describe('routes/index.js', () => {
         '/v1/payments',
         '/v1/demo/relay',
         '/admin/tenants',
+        '/admin/earnings',
+        '/admin/earnings.json',
         '/v1/pay',
         '/v2/quote',
       ];
@@ -162,7 +176,7 @@ describe('routes/index.js', () => {
         }
       }
 
-      expect(matchCount).toBe(9);
+      expect(matchCount).toBe(10);
     });
   });
 });

@@ -33,6 +33,7 @@ export const paymentsRepo = {
       confirmedAt: new Date().toISOString(),
     };
     if (input.resource) item.resource = input.resource;
+    if (input.network) item.network = input.network;
     try {
       await ddb.send(
         new PutCommand({

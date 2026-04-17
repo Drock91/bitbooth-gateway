@@ -213,7 +213,7 @@ describe('xrpl/client', () => {
       const { verifyPayment } = await freshImport();
 
       const result = await verifyPayment(xrpInput);
-      expect(result).toEqual({ ok: true, ledgerIndex: 83145921 });
+      expect(result).toEqual({ ok: true, ledgerIndex: 83145921, assetSymbol: 'XRP' });
     });
 
     it('accepts overpayment (delivered > expected)', async () => {
@@ -255,7 +255,7 @@ describe('xrpl/client', () => {
       const { verifyPayment } = await freshImport();
 
       const result = await verifyPayment(iouInput);
-      expect(result).toEqual({ ok: true, ledgerIndex: 83145922 });
+      expect(result).toEqual({ ok: true, ledgerIndex: 83145922, assetSymbol: 'USD' });
     });
 
     it('accepts overpayment for IOU', async () => {

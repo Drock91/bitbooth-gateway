@@ -1,0 +1,21 @@
+{
+  "_comment_1": "Drop this in your MCP client config:",
+  "_comment_2": "  Claude Desktop: ~/Library/Application Support/Claude/claude_desktop_config.json",
+  "_comment_3": "  Claude Code:    ~/.claude/mcp_settings.json",
+  "_comment_4": "  Cursor:         Cursor → Settings → MCP → 'Edit in settings.json'",
+  "_comment_5": "  Continue.dev:   ~/.continue/config.json",
+
+  "mcpServers": {
+    "bitbooth-fetch": {
+      "command": "npx",
+      "args": ["-y", "@bitbooth/mcp-fetch"],
+      "env": {
+        "BITBOOTH_AGENT_KEY": "0x_YOUR_BASE_SEPOLIA_TESTNET_PRIVATE_KEY_HERE"
+      }
+    }
+  },
+
+  "_comment_mainnet": "To use Base mainnet (real USDC), add: BITBOOTH_CHAIN_ID=8453 + BITBOOTH_API_URL=https://app.heinrichstech.com",
+  "_comment_faucets": "Get free testnet ETH+USDC: https://www.alchemy.com/faucets/base-sepolia + https://faucet.circle.com",
+  "_comment_help": "Issues / questions: https://github.com/Drock91/bitbooth-gateway/issues"
+}

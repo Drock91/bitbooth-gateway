@@ -4,10 +4,6 @@ import {
   LambdaIntegration,
   ApiKeySourceType,
   Cors,
-  RequestValidator,
-  Model,
-  JsonSchemaVersion,
-  JsonSchemaType,
   UsagePlan,
   ApiKey,
   Period,
@@ -63,7 +59,6 @@ export class ApiGateway extends Construct {
           }),
         ),
         methodOptions: {
-          '/v1/quote/POST': { throttlingRateLimit: 10, throttlingBurstLimit: 20 },
           '/v1/resource/POST': { throttlingRateLimit: 5, throttlingBurstLimit: 10 },
           '/v1/resource/premium/POST': { throttlingRateLimit: 5, throttlingBurstLimit: 10 },
           '/v1/fetch/POST': { throttlingRateLimit: 5, throttlingBurstLimit: 10 },
@@ -84,38 +79,8 @@ export class ApiGateway extends Construct {
       },
     });
 
-    const bodyValidator = new RequestValidator(this, 'BodyValidator', {
-      restApi: this.api,
-      requestValidatorName: `x402-body-validator-${stage}`,
-      validateRequestBody: true,
-      validateRequestParameters: false,
-    });
-
-    const quoteModel = new Model(this, 'QuoteRequestModel', {
-      restApi: this.api,
-      contentType: 'application/json',
-      modelName: 'QuoteRequest',
-      schema: {
-        schema: JsonSchemaVersion.DRAFT4,
-        type: JsonSchemaType.OBJECT,
-        required: ['fiatCurrency', 'fiatAmount', 'cryptoAsset'],
-        properties: {
-          fiatCurrency: { type: JsonSchemaType.STRING, enum: ['USD', 'EUR', 'GBP'] },
-          fiatAmount: {
-            type: JsonSchemaType.NUMBER,
-            minimum: 0,
-            exclusiveMinimum: true,
-            maximum: 50000,
-          },
-          cryptoAsset: { type: JsonSchemaType.STRING, enum: ['USDC', 'XRP', 'ETH'] },
-          exchange: {
-            type: JsonSchemaType.STRING,
-            enum: ['moonpay', 'coinbase', 'kraken', 'binance', 'uphold'],
-          },
-        },
-        additionalProperties: false,
-      },
-    });
+    // bodyValidator + quoteModel removed with /v1/quote unrouting.
+    // Re-add when a real exchange adapter ships.
 
     const apiInt = new LambdaIntegration(lambdas.apiFn);
     const v1 = this.api.root.addResource('v1');
@@ -128,10 +93,9 @@ export class ApiGateway extends Construct {
     // not by API Gateway's own API-key system — those two systems both read the
     // x-api-key header and would collide. `apiKeyRequired: true` is intentionally
     // NOT set on tenant-scoped routes.
-    v1.addResource('quote').addMethod('POST', apiInt, {
-      requestValidator: bodyValidator,
-      requestModels: { 'application/json': quoteModel },
-    });
+    //
+    // /v1/quote intentionally NOT wired — the 5 exchange adapters are stubs
+    // that return fake math. Hidden until a real adapter ships.
     // /v1/resource MUST allow requests with no X-Payment header — that is the
     // trigger for the x402 challenge (HTTP 402) response. Do not mark X-Payment
     // as a required request parameter here.
@@ -183,7 +147,22 @@ export class ApiGateway extends Construct {
     const admin = this.api.root.addResource('admin');
     // Admin auth is enforced by the Lambda admin middleware (hashed admin key),
     // not by API Gateway — same reason as tenant routes above.
-    admin.addResource('tenants').addMethod('GET', apiInt);
+    // Login / logout / HTML pages are served by the dashboard Lambda
+    // (same pino logger, same secrets-manager config). JSON endpoints
+    // (/admin/tenants, /admin/earnings, /admin/earnings.json) are served
+    // by the api Lambda so they share validators / rate limit wiring.
+    admin.addMethod('GET', dashboardInt);
+    admin.addResource('login').addMethod('POST', dashboardInt);
+    admin.addResource('logout').addMethod('GET', dashboardInt);
+    const adminChangePw = admin.addResource('change-password');
+    adminChangePw.addMethod('GET', dashboardInt);
+    adminChangePw.addMethod('POST', dashboardInt);
+    const adminTenants = admin.addResource('tenants');
+    adminTenants.addMethod('GET', apiInt);
+    adminTenants.addResource('ui').addMethod('GET', dashboardInt);
+    admin.addResource('metrics').addResource('ui').addMethod('GET', dashboardInt);
+    admin.addResource('earnings').addMethod('GET', apiInt);
+    admin.addResource('earnings.json').addMethod('GET', apiInt);
 
     const plan = new UsagePlan(this, 'UsagePlan', {
       name: `x402-usage-plan-${stage}`,

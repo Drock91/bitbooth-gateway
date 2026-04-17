@@ -1,4 +1,8 @@
-import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
+import {
+  SecretsManagerClient,
+  GetSecretValueCommand,
+  PutSecretValueCommand,
+} from '@aws-sdk/client-secrets-manager';
 import { getConfig } from './config.js';
 
 const client = new SecretsManagerClient({ region: getConfig().awsRegion });
@@ -18,4 +22,11 @@ export async function getSecret(arn) {
 export async function getSecretJson(arn) {
   const raw = await getSecret(arn);
   return JSON.parse(raw);
+}
+
+export async function putSecret(arn, value) {
+  await client.send(new PutSecretValueCommand({ SecretId: arn, SecretString: value }));
+  // Overwrite cache immediately so the next read hits the new value
+  // without waiting for TTL_MS to expire.
+  cache.set(arn, { value, fetchedAt: Date.now() });
 }

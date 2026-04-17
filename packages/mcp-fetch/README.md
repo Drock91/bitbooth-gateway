@@ -1,10 +1,15 @@
 # @bitbooth/mcp-fetch
 
-MCP server that fetches any URL and returns clean markdown. Payments handled automatically via the [x402 protocol](https://github.com/Drock91/BitBooth) — your agent wallet pays **0.005 USDC per fetch**.
+[![npm version](https://img.shields.io/npm/v/@bitbooth/mcp-fetch.svg)](https://www.npmjs.com/package/@bitbooth/mcp-fetch)
+[![MIT license](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
+MCP server that fetches any URL and returns clean markdown. Payments handled automatically via the [x402 protocol](https://github.com/Drock91/bitbooth-gateway) — your agent wallet pays **$0.005 per fetch**.
 
 **Zero signup. No API keys. No accounts.** The agent's wallet pays per call.
 
-> **Testnet by default.** Defaults to Base Sepolia so a fresh install spends free testnet USDC, not real money. Opt into mainnet explicitly (see below).
+> ✅ **Verified end-to-end on live mainnet** — last real payment landed in 1.3s ([proof](https://xrpscan.com/tx/493F6F1ADB9D258898A028F1D0A34684F5DD8B8C9F99BC6FB3432EA1F8AA45C0)).
+>
+> 🛡️ **Testnet by default.** Defaults to Base Sepolia so a fresh install spends free testnet USDC, not real money. Opt into mainnet explicitly (see below).
 
 ## Install
 
@@ -94,12 +99,14 @@ When you've tested against Sepolia and want to run against real Base mainnet:
 
 ```bash
 export BITBOOTH_CHAIN_ID=8453
-export BITBOOTH_API_URL=https://<production-url>  # ask maintainer for current
+export BITBOOTH_API_URL=https://app.heinrichstech.com
 export BITBOOTH_RPC_URL=https://base-rpc.publicnode.com   # or your own RPC
 export BITBOOTH_AGENT_KEY=0x<mainnet-wallet-with-real-USDC>
 ```
 
 The package prints a warning banner to stderr whenever mainnet is active so a misconfig can't silently drain a real wallet.
+
+> The same `app.heinrichstech.com` gateway also accepts XRPL Mainnet payments (XRP, USDC-via-Bitstamp, RLUSD-via-Ripple). Native XRPL support in this MCP package is on the roadmap — track it at https://github.com/Drock91/bitbooth-gateway/issues
 
 ## Programmatic use
 

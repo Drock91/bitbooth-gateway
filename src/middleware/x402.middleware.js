@@ -57,14 +57,19 @@ export async function enforceX402(input) {
     });
   }
 
+  // Prefer the asset that was ACTUALLY delivered (returned by the chain
+  // adapter when available) over the route's default. Matters for XRPL
+  // where the same route accepts XRP, USDC, or RLUSD — and the dashboard
+  // should show what the agent paid with, not what the route advertised.
   await paymentsRepo.recordConfirmed({
     idempotencyKey: parsed.nonce,
     accountId: input.accountId,
     amountWei: input.route.amountWei,
-    assetSymbol: input.route.assetSymbol,
+    assetSymbol: result.assetSymbol || input.route.assetSymbol,
     txHash: parsed.txHash,
     blockNumber: result.blockNumber,
     resource: input.route.resource,
+    network,
   });
 
   await usageRepo.increment(input.accountId, {

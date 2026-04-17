@@ -6,12 +6,12 @@
     "url": "https://github.com/Drock91/bitbooth-gateway",
     "source": "github"
   },
-  "version": "1.0.0",
+  "version": "1.0.1",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@bitbooth/mcp-fetch",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "transport": {
         "type": "stdio"
       },

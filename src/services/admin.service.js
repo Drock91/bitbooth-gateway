@@ -1,6 +1,6 @@
 import { tenantsRepo } from '../repositories/tenants.repo.js';
 import { sha256, hmacSha256, safeEquals } from '../lib/crypto.js';
-import { getSecret } from '../lib/secrets.js';
+import { getSecret, putSecret } from '../lib/secrets.js';
 import { getConfig } from '../lib/config.js';
 import { UnauthorizedError } from '../lib/errors.js';
 import { fraudRepo } from '../repositories/fraud.repo.js';
@@ -37,6 +37,15 @@ export const adminService = {
     if (!safeEquals(sha256(password), expected)) {
       throw new UnauthorizedError('Invalid admin credentials');
     }
+  },
+
+  async changeAdminKey(currentPassword, newPassword) {
+    if (!newPassword || newPassword.length < 12) {
+      throw new UnauthorizedError('New password must be at least 12 characters');
+    }
+    await this.verifyAdminKey(currentPassword);
+    const arn = getConfig().secretArns.adminApiKeyHash;
+    await putSecret(arn, sha256(newPassword));
   },
 
   async createSessionCookie() {

@@ -68,8 +68,8 @@ describe('ApiGateway construct — route count', () => {
   const { template } = buildTemplate();
   const methods = collectMethods(template);
 
-  it('creates exactly 24 non-OPTIONS API methods', () => {
-    expect(methods.length).toBe(24);
+  it('creates exactly 32 non-OPTIONS API methods', () => {
+    expect(methods.length).toBe(32);
   });
 
   it('creates 2 GET health routes (health + ready)', () => {
@@ -79,12 +79,7 @@ describe('ApiGateway construct — route count', () => {
     expect(healthMethods.length).toBe(2);
   });
 
-  it('creates POST /v1/quote', () => {
-    const match = methods.find(
-      (m) => m.id.toLowerCase().includes('quote') && m.httpMethod === 'POST',
-    );
-    expect(match).toBeDefined();
-  });
+  // POST /v1/quote intentionally not wired (exchange adapters were stubs)
 
   it('creates POST /v1/resource', () => {
     const match = methods.find(
@@ -151,10 +146,6 @@ describe('ApiGateway construct — API key requirements', () => {
   // Tenant x-api-key is verified by the Lambda auth middleware, not by
   // APIGW's own usage-plan key system — both read x-api-key and would collide.
   // So none of the tenant-scoped routes should carry apiKeyRequired: true.
-  it('does NOT require APIGW key on POST /v1/quote (tenant key handled by Lambda)', () => {
-    const m = methods.find((m) => m.id.toLowerCase().includes('quote') && m.httpMethod === 'POST');
-    expect(m.apiKeyRequired).toBe(false);
-  });
 
   it('does NOT require APIGW key on POST /v1/resource (x402 flow starts with no auth header other than tenant key)', () => {
     const m = methods.find(
@@ -254,31 +245,7 @@ describe('ApiGateway construct — CORS config', () => {
 describe('ApiGateway construct — request validators', () => {
   const { template } = buildTemplate();
 
-  it('creates body validator with correct settings', () => {
-    template.hasResourceProperties('AWS::ApiGateway::RequestValidator', {
-      Name: 'x402-body-validator-dev',
-      ValidateRequestBody: true,
-      ValidateRequestParameters: false,
-    });
-  });
-
-  it('uses stage in validator name for prod', () => {
-    const { template: prod } = buildTemplate('prod');
-    prod.hasResourceProperties('AWS::ApiGateway::RequestValidator', {
-      Name: 'x402-body-validator-prod',
-    });
-  });
-
-  it('attaches body validator + QuoteRequest model to /v1/quote', () => {
-    const methods = template.findResources('AWS::ApiGateway::Method');
-    const quotePost = Object.values(methods).find(
-      (m) =>
-        m.Properties.HttpMethod === 'POST' && JSON.stringify(m.Properties).includes('QuoteRequest'),
-    );
-    expect(quotePost).toBeDefined();
-    expect(quotePost.Properties.RequestValidatorId).toBeDefined();
-    expect(quotePost.Properties.RequestModels['application/json']).toBeDefined();
-  });
+  // bodyValidator + QuoteRequest model tests removed with /v1/quote unrouting.
 
   it('does NOT require X-Payment header on /v1/resource — 402 flow starts without it', () => {
     const methods = template.findResources('AWS::ApiGateway::Method');
@@ -289,29 +256,6 @@ describe('ApiGateway construct — request validators', () => {
     const [, method] = match;
     const params = method.Properties.RequestParameters;
     expect(params?.['method.request.header.X-Payment']).toBeUndefined();
-  });
-
-  it('QuoteRequest model has correct JSON schema', () => {
-    const models = template.findResources('AWS::ApiGateway::Model');
-    const quoteModel = Object.values(models).find((m) => m.Properties.Name === 'QuoteRequest');
-    expect(quoteModel).toBeDefined();
-    const schema = quoteModel.Properties.Schema;
-    expect(schema.required).toEqual(['fiatCurrency', 'fiatAmount', 'cryptoAsset']);
-    expect(schema.properties.fiatCurrency.enum).toEqual(['USD', 'EUR', 'GBP']);
-    // Draft-4 (API Gateway's flavor): exclusiveMinimum is a boolean modifier
-    // on minimum, not a standalone numeric keyword.
-    expect(schema.properties.fiatAmount.minimum).toBe(0);
-    expect(schema.properties.fiatAmount.exclusiveMinimum).toBe(true);
-    expect(schema.properties.fiatAmount.maximum).toBe(50000);
-    expect(schema.properties.cryptoAsset.enum).toEqual(['USDC', 'XRP', 'ETH']);
-    expect(schema.properties.exchange.enum).toEqual([
-      'moonpay',
-      'coinbase',
-      'kraken',
-      'binance',
-      'uphold',
-    ]);
-    expect(schema.additionalProperties).toBe(false);
   });
 });
 
@@ -331,18 +275,7 @@ describe('ApiGateway construct — method throttling', () => {
     });
   });
 
-  it('throttles POST /v1/quote to 10 rps / 20 burst', () => {
-    template.hasResourceProperties('AWS::ApiGateway::Stage', {
-      MethodSettings: Match.arrayWith([
-        Match.objectLike({
-          HttpMethod: 'POST',
-          ResourcePath: '/~1v1~1quote',
-          ThrottlingRateLimit: 10,
-          ThrottlingBurstLimit: 20,
-        }),
-      ]),
-    });
-  });
+  // /v1/quote throttle test removed with /v1/quote unrouting.
 
   it('throttles POST /v1/resource to 5 rps / 10 burst', () => {
     template.hasResourceProperties('AWS::ApiGateway::Stage', {

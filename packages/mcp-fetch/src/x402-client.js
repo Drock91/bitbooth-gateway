@@ -2,12 +2,11 @@ import { Wallet, JsonRpcProvider, Contract } from 'ethers';
 
 const USDC_ABI = ['function transfer(address to, uint256 amount) returns (bool)'];
 
-// Defaults to the staging API GW URL + Base Sepolia testnet. Users with
-// mainnet wallets explicitly opt in by setting BITBOOTH_CHAIN_ID=8453 +
-// BITBOOTH_API_URL=<prod URL>. Correct default for a public npm package --
-// a fresh install with no config spends testnet money, not real money.
-const DEFAULT_API_URL =
-  'https://x76se73jxd.execute-api.us-east-2.amazonaws.com/staging';
+// Defaults to BitBooth's hosted gateway on Base Sepolia testnet. Users who
+// want to self-host or use Base mainnet override via BITBOOTH_API_URL +
+// BITBOOTH_CHAIN_ID=8453. Default = testnet so a fresh install spends
+// free Sepolia USDC, not real money.
+const DEFAULT_API_URL = 'https://app.heinrichstech.com';
 const DEFAULT_CHAIN_ID = 84532; // Base Sepolia
 const DEFAULT_CONFIRMATIONS = 1;
 
@@ -90,10 +89,31 @@ export function createX402Client(opts = {}) {
       throw new Error('402 response missing challenge.nonce');
     }
 
-    const tx = await usdc.transfer(challenge.payTo, BigInt(challenge.amountWei));
+    let tx;
+    try {
+      tx = await usdc.transfer(challenge.payTo, BigInt(challenge.amountWei));
+    } catch (err) {
+      // Translate the most common ethers errors into actionable messages.
+      // Agents that surface these messages to users save support tickets.
+      const msg = err?.shortMessage || err?.message || String(err);
+      if (/insufficient funds/i.test(msg)) {
+        throw new Error(
+          `Wallet ${wallet.address} has no ETH for gas on ${chain.name}. ` +
+            `Fund it: https://www.alchemy.com/faucets/base-sepolia (testnet) or buy ETH on an exchange (mainnet).`,
+        );
+      }
+      if (/transfer amount exceeds balance/i.test(msg) || /ERC20: transfer/i.test(msg)) {
+        throw new Error(
+          `Wallet ${wallet.address} has no USDC on ${chain.name}. ` +
+            `Fund it: https://faucet.circle.com (testnet) or buy USDC on an exchange (mainnet).`,
+        );
+      }
+      throw new Error(`USDC transfer failed: ${msg}`);
+    }
+
     const receipt = await tx.wait(confirmations);
     if (receipt.status !== 1) {
-      throw new Error(`Payment tx reverted: ${tx.hash}`);
+      throw new Error(`Payment tx reverted on-chain: ${tx.hash}`);
     }
 
     const xPayment = JSON.stringify({

@@ -7,6 +7,11 @@ export const FraudEventType = z.enum([
   'admin.login',
   'admin.logout',
   'admin.listTenants',
+  'admin.listTenantsUI',
+  'admin.suspendTenant',
+  'admin.reactivateTenant',
+  'admin.viewMetrics',
+  'admin.changePassword',
 ]);
 
 export const FraudEvent = z.object({

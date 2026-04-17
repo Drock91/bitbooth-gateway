@@ -152,11 +152,11 @@ describe('admin.controller', () => {
   });
 
   describe('postAdminLogin', () => {
-    it('redirects to /admin/tenants on valid login', async () => {
+    it('redirects to /admin/tenants/ui on valid login', async () => {
       const event = makeEvent({ body: 'password=admin-secret-key' });
       const res = await postAdminLogin(event);
       expect(res.statusCode).toBe(303);
-      expect(res.headers.location).toBe('/admin/tenants');
+      expect(res.headers.location).toBe('/admin/tenants/ui');
       expect(res.headers['set-cookie']).toBe(COOKIE.options);
     });
 

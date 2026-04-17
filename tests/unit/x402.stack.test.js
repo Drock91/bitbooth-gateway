@@ -194,11 +194,7 @@ describe('X402Stack — API Gateway routes', () => {
     expect(match.apiKeyRequired).toBe(false);
   });
 
-  it('has POST /v1/quote route without apiKeyRequired (Lambda auth handles it)', () => {
-    const match = methods.find((m) => m.logicalId.includes('quote') && m.httpMethod === 'POST');
-    expect(match).toBeDefined();
-    expect(match.apiKeyRequired).toBe(false);
-  });
+  // /v1/quote unrouted (exchange adapters were stubs); test removed.
 
   it('has POST /v1/resource route without apiKeyRequired (Lambda auth handles it)', () => {
     const match = methods.find((m) => m.logicalId.includes('resource') && m.httpMethod === 'POST');
@@ -405,18 +401,7 @@ describe('X402Stack — method-level throttling', () => {
     });
   });
 
-  it('throttles POST /v1/quote to 10 rps with burst 20', () => {
-    template.hasResourceProperties('AWS::ApiGateway::Stage', {
-      MethodSettings: Match.arrayWith([
-        Match.objectLike({
-          HttpMethod: 'POST',
-          ResourcePath: '/~1v1~1quote',
-          ThrottlingBurstLimit: 20,
-          ThrottlingRateLimit: 10,
-        }),
-      ]),
-    });
-  });
+  // /v1/quote throttle test removed with /v1/quote unrouting.
 
   it('throttles POST /v1/resource to 5 rps with burst 10', () => {
     template.hasResourceProperties('AWS::ApiGateway::Stage', {
@@ -754,13 +739,7 @@ describe('X402Stack — WAF WebACL', () => {
 describe('X402Stack — API Gateway RequestValidators', () => {
   const template = buildTemplate();
 
-  it('creates a body RequestValidator for POST body schemas', () => {
-    template.hasResourceProperties('AWS::ApiGateway::RequestValidator', {
-      Name: 'x402-body-validator-dev',
-      ValidateRequestBody: true,
-      ValidateRequestParameters: false,
-    });
-  });
+  // body RequestValidator removed with /v1/quote unrouting (was the only consumer).
 
   it('does not create a params RequestValidator (removed — Lambda handles X-Payment)', () => {
     const validators = template.findResources('AWS::ApiGateway::RequestValidator');
@@ -770,45 +749,9 @@ describe('X402Stack — API Gateway RequestValidators', () => {
     expect(paramsValidator).toBeUndefined();
   });
 
-  it('uses stage name in prod body validator', () => {
-    const prodTemplate = buildTemplate('prod');
-    prodTemplate.hasResourceProperties('AWS::ApiGateway::RequestValidator', {
-      Name: 'x402-body-validator-prod',
-    });
-  });
+  // body validator stage-name test removed with /v1/quote unrouting.
 
-  it('creates a QuoteRequest model with correct JSON schema', () => {
-    const models = template.findResources('AWS::ApiGateway::Model');
-    const quoteModel = Object.values(models).find((m) => m.Properties.Name === 'QuoteRequest');
-    expect(quoteModel).toBeDefined();
-    expect(quoteModel.Properties.ContentType).toBe('application/json');
-    const schema = quoteModel.Properties.Schema;
-    expect(schema.type).toBe('object');
-    expect(schema.required).toEqual(['fiatCurrency', 'fiatAmount', 'cryptoAsset']);
-    expect(schema.properties.fiatCurrency.enum).toEqual(['USD', 'EUR', 'GBP']);
-    expect(schema.properties.fiatAmount.maximum).toBe(50000);
-    expect(schema.properties.cryptoAsset.enum).toEqual(['USDC', 'XRP', 'ETH']);
-    expect(schema.properties.exchange.enum).toEqual([
-      'moonpay',
-      'coinbase',
-      'kraken',
-      'binance',
-      'uphold',
-    ]);
-    expect(schema.additionalProperties).toBe(false);
-  });
-
-  it('attaches body validator and QuoteRequest model to POST /v1/quote', () => {
-    const methods = template.findResources('AWS::ApiGateway::Method');
-    const quotePost = Object.values(methods).find(
-      (m) =>
-        m.Properties.HttpMethod === 'POST' && JSON.stringify(m.Properties).includes('QuoteRequest'),
-    );
-    expect(quotePost).toBeDefined();
-    expect(quotePost.Properties.RequestValidatorId).toBeDefined();
-    expect(quotePost.Properties.RequestModels).toBeDefined();
-    expect(quotePost.Properties.RequestModels['application/json']).toBeDefined();
-  });
+  // QuoteRequest model + /v1/quote validator tests removed with /v1/quote unrouting.
 
   it('does not attach params validator or required X-Payment header to /v1/resource', () => {
     const methods = template.findResources('AWS::ApiGateway::Method');

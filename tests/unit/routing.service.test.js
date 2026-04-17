@@ -264,8 +264,7 @@ describe('routing.service', () => {
       expect(mockNativeXrplVerify).toHaveBeenCalledWith({
         txHash: 'AB' + 'CD'.repeat(31),
         destination: 'rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh',
-        amount: '5000000',
-        issuer: undefined,
+        allowed: ['5000000'],
       });
     });
 
@@ -395,6 +394,7 @@ describe('routing.service', () => {
         txHash: TX,
         destination: DEST,
         allowed: [
+          '5000',
           { currency: 'USD', issuer: USDC_ISSUER, value: '0.005000' },
           { currency: 'RLUSD', issuer: RLUSD_ISSUER, value: '0.005000' },
         ],
@@ -416,7 +416,7 @@ describe('routing.service', () => {
       expect(mockNativeXrplVerify).toHaveBeenCalledWith({
         txHash: TX,
         destination: DEST,
-        allowed: [{ currency: 'USD', issuer: USDC_ISSUER, value: '0.005000' }],
+        allowed: ['5000', { currency: 'USD', issuer: USDC_ISSUER, value: '0.005000' }],
       });
     });
 
@@ -435,7 +435,7 @@ describe('routing.service', () => {
       expect(mockNativeXrplVerify).toHaveBeenCalledWith({
         txHash: TX,
         destination: DEST,
-        allowed: [{ currency: 'RLUSD', issuer: RLUSD_ISSUER, value: '0.005000' }],
+        allowed: ['5000', { currency: 'RLUSD', issuer: RLUSD_ISSUER, value: '0.005000' }],
       });
     });
 
@@ -537,8 +537,7 @@ describe('routing.service', () => {
       expect(mockNativeXrplVerify).toHaveBeenCalledWith({
         txHash: TX,
         destination: DEST,
-        amount: '1000000',
-        issuer: undefined,
+        allowed: ['1000000'],
       });
     });
   });

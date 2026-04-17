@@ -6,7 +6,7 @@ export function createServer(opts = {}) {
   const client = createX402Client(opts);
 
   const server = new McpServer(
-    { name: 'bitbooth-fetch', version: '1.0.0' },
+    { name: 'bitbooth-fetch', version: '1.0.1' },
     {
       instructions:
         'Fetches any URL and returns its content as markdown. ' +

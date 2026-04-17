@@ -37,7 +37,12 @@ export async function getTransaction(txHash) {
       if (!response?.result) {
         throw new UpstreamError('native-xrpl', { reason: 'tx-not-found', txHash });
       }
-      return response.result;
+      // xrpl.js v4+ nests signed-tx fields (Account, Destination,
+      // TransactionType, Amount, ...) under result.tx_json. Older shape
+      // had them at result root. Flatten so TxResult parses either shape --
+      // root fields (validated, meta, ledger_index) win on conflict.
+      const r = response.result;
+      return { ...(r.tx_json || {}), ...r };
     }),
   );
 }
@@ -93,7 +98,11 @@ export async function verifyPayment({ txHash, destination, amount, issuer, allow
     return { ok: false, reason: 'amount-mismatch' };
   }
 
-  return { ok: true, ledgerIndex: tx.ledger_index };
+  // Surface what was actually delivered so the caller can record the
+  // correct asset symbol — `delivered_amount` is a string of drops for
+  // native XRP, or {currency, issuer, value} for an IOU payment.
+  const deliveredAsset = typeof delivered === 'string' ? 'XRP' : delivered.currency;
+  return { ok: true, ledgerIndex: tx.ledger_index, assetSymbol: deliveredAsset };
 }
 
 export function _resetClient() {

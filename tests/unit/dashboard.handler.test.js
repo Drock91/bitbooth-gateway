@@ -54,8 +54,11 @@ vi.mock('../../src/controllers/admin.controller.js', () => ({
   getAdminLogout: (...args) => mockGetAdminLogout(...args),
   listTenantsUI: (...args) => mockListTenantsUI(...args),
   getAdminMetricsUI: (...args) => mockGetAdminMetricsUI(...args),
+  getAdminChangePassword: vi.fn().mockResolvedValue({ statusCode: 200, body: 'change-pw-page' }),
+  postAdminChangePassword: vi.fn().mockResolvedValue({ statusCode: 200, body: 'updated' }),
 }));
 vi.mock('../../src/lib/logger.js', () => ({
+  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
   withCorrelation: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn() }),
   flushLogger: vi.fn().mockResolvedValue(undefined),
 }));

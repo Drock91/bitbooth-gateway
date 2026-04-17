@@ -1,8 +1,58 @@
 # Changelog
 
-All notable changes to the x402 payment gateway are documented here.
+All notable changes to the BitBooth payment gateway are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+## [1.0.0] - 2026-04-17
+
+First public release. Repository moved from `Drock91/BitBooth` (private) to `Drock91/bitbooth-gateway` (public, MIT).
+
+### Added
+
+- `@bitbooth/mcp-fetch@1.0.0` published to npm — MCP server agents can install in one command
+- BitBooth-branded admin console at `app.heinrichstech.com/admin` with 4 pages (Tenants, Metrics, Earnings, Password) sharing a unified gradient brand bar
+- Grafana-style earnings dashboard with KPI panels, 24h hourly sparkline (Chart.js), per-chain / per-agent / per-resource breakdowns, recent payments table with explorer links
+- Self-service admin password rotation (`/admin/change-password`) with show/hide toggles, 12-char minimum, secret-cache invalidation
+- Stage-prefix helper so all redirects + form actions + nav links work correctly via the API Gateway stage URL
+- `examples/` folder: bare curl, Node EVM payment, Node XRPL payment, MCP config, LangChain integration
+- `SMOKE_TEST.md` — 30-second user-side install verification
+- `docs/LAUNCH_LINKEDIN.md`, `docs/COLD_EMAIL_TEMPLATE.md`, `docs/MCP_REGISTRY_SUBMIT.md`, `docs/LANDING_PAGE_COPY.md`
+
+### Changed
+
+- README rewritten to be honest: only chains with verified end-to-end payments get a green checkmark; stub adapters explicitly labelled as scaffold
+- Default `BITBOOTH_API_URL` in `@bitbooth/mcp-fetch` switched from raw API GW URL to `https://app.heinrichstech.com`
+- `x402-client.js` now translates ethers errors into actionable messages (insufficient ETH, no USDC, etc.) so end users get faucet links instead of stack traces
+- XRPL adapter now returns `assetSymbol` from `delivered_amount` so the dashboard shows the actual paid asset (XRP / USD-IOU / RLUSD), not the route default
+- Custom domain `app.heinrichstech.com` wired across staging — admin + product paths all use it
+
+### Fixed
+
+- `/v1/quote` was returning 502 because IAM grants were missing AND because the 5 exchange adapters (Moonpay/Coinbase/Kraken/Binance/Uphold) are stubs that don't make real HTTP calls. **Endpoint unrouted entirely** until a real adapter ships
+- Five admin pages (`GET /admin`, `POST /admin/login`, `GET /admin/logout`, `/admin/tenants/ui`, `/admin/metrics/ui`) were defined in `dashboard.handler.js` but never wired through API Gateway — now properly routed
+- Dashboard handler was silently swallowing errors with a generic 500 — now logs the full err + stack and routes 401s to a 303 redirect to `/admin`
+- Dashboard Lambda was missing `secretsmanager:GetSecretValue` on `admin-api-key-hash` and `dynamodb:*Item` on `fraud-events` / `fraud-tally` — added grants
+- `FraudEventType` Zod enum was missing `admin.listTenantsUI`, `admin.viewMetrics`, `admin.changePassword` — was causing 500s on every admin HTML page after a real audit-log write
+- Earnings dashboard was labelling XRPL payments as "USDC" because middleware was recording `route.assetSymbol` instead of the actually-delivered asset
+- xrpl.js v4 nests signed-tx fields under `tx_json`; verifier was looking at root and rejecting valid txs as `invalid-tx-shape`
+- `wrapXrplVerify` only included IOU options in `allowed[]` when issuers were configured, dropping the native-XRP option — was rejecting legitimate XRP payments as `amount-mismatch`
+
+### Removed
+
+- All public references to fiat onramping (`Moonpay/Coinbase/Kraken/Binance/Uphold`) — adapters left in `src/adapters/` as scaffolds for future work, but `/v1/quote` is unrouted, exchange secrets no longer granted to apiFn, README + openapi + landing page no longer claim it works
+
+### Security
+
+- Rotated staging admin password
+- Documented that `BITBOOTH_AGENT_KEY` should be a dedicated wallet, never a personal one
+- Default install spends free testnet money; mainnet requires explicit `BITBOOTH_CHAIN_ID=8453` opt-in with a stderr warning banner
+
+### Verification
+
+- Full money loop verified end-to-end on real XRPL Mainnet (tx `493F6F1ADB9D258898A028F1D0A34684F5DD8B8C9F99BC6FB3432EA1F8AA45C0`, 1.3s round-trip)
+- Race demo verified on Base Sepolia (tx `0x97aed08b594e5fbd8e3f71bb1fc01ac3100994da63ae1513906e9136c7ce7d24`)
+- 3,306 unit tests passing
 
 ## [0.7.0] - 2026-04-09
 

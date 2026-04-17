@@ -65,7 +65,11 @@ function wrapXrplVerify(input) {
     return { ok: false, reason: 'forged-issuer' };
   }
 
-  const allowed = [];
+  // Native XRP (drops) is ALWAYS an acceptable payment, even when
+  // USDC/RLUSD issuers are configured. The 402 challenge returns all
+  // three options in accepts[]; the agent picks one and the verifier
+  // must accept whichever they paid.
+  const allowed = [String(amountBaseUnits)];
   if (cfg?.xrpl?.usdcIssuer) {
     allowed.push({ currency: 'USD', issuer: cfg.xrpl.usdcIssuer, value });
   }
@@ -73,19 +77,10 @@ function wrapXrplVerify(input) {
     allowed.push({ currency: 'RLUSD', issuer: cfg.xrpl.rlusdIssuer, value });
   }
 
-  if (allowed.length > 0) {
-    return nativeXrplVerify({
-      txHash,
-      destination: input.expectedTo,
-      allowed,
-    });
-  }
-
   return nativeXrplVerify({
     txHash,
     destination: input.expectedTo,
-    amount: String(amountBaseUnits),
-    issuer: undefined,
+    allowed,
   });
 }
 

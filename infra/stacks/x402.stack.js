@@ -96,6 +96,9 @@ export class X402Stack extends Stack {
       ...(process.env.XRPL_NETWORK
         ? { XRPL_NETWORK: process.env.XRPL_NETWORK }
         : {}),
+      // When XRPL is set to mainnet (xrpl:0), override the WSS endpoint
+      // so the adapter looks up tx hashes on mainnet, not testnet.
+      ...(process.env.XRPL_WS_URL ? { XRPL_WS_URL: process.env.XRPL_WS_URL } : {}),
     };
 
     const lambdas = new Lambdas(this, 'Lambdas', { stage, tables, secrets, commonEnv });

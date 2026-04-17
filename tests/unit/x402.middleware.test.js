@@ -429,6 +429,7 @@ describe('x402.middleware — enforceX402', () => {
       txHash: MOCK_TX_HASH,
       blockNumber: 99,
       resource: '/v1/data',
+      network: expect.any(String),
     });
   });
 

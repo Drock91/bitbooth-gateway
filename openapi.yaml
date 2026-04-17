@@ -240,44 +240,8 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
 
-  /v1/quote:
-    post:
-      tags: [quotes]
-      summary: Best fiat-to-crypto quote across exchanges
-      operationId: postQuote
-      security: [{ ApiKeyAuth: [] }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/QuoteRequest'
-      responses:
-        '200':
-          description: Best available quote
-          headers:
-            X-API-Version:
-              $ref: '#/components/headers/X-API-Version'
-            RateLimit-Limit:
-              $ref: '#/components/headers/RateLimit-Limit'
-            RateLimit-Remaining:
-              $ref: '#/components/headers/RateLimit-Remaining'
-            RateLimit-Reset:
-              $ref: '#/components/headers/RateLimit-Reset'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/QuoteResponse'
-        '400':
-          $ref: '#/components/responses/ValidationError'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-        '413':
-          $ref: '#/components/responses/PayloadTooLarge'
-        '502':
-          $ref: '#/components/responses/UpstreamError'
+  # /v1/quote intentionally removed — exchange adapters were stubs returning
+  # fake math, not real exchange quotes. Re-add when a real adapter ships.
 
   /v1/resource:
     post:
@@ -791,6 +755,117 @@ paths:
                 $ref: '#/components/schemas/AdminTenantsResponse'
         '400':
           $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /admin/change-password:
+    get:
+      tags: [admin]
+      summary: Change-password form (HTML)
+      operationId: getAdminChangePassword
+      description: Renders an HTML form for rotating the admin key. Requires session.
+      responses:
+        '200':
+          description: HTML change-password form
+          content:
+            text/html:
+              schema: { type: string }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    post:
+      tags: [admin]
+      summary: Submit a new admin password
+      operationId: postAdminChangePassword
+      description: |
+        Verifies currentPassword against the stored hash, then writes
+        sha256(newPassword) to the admin-api-key-hash secret. Requires session.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [currentPassword, newPassword, confirmPassword]
+              properties:
+                currentPassword: { type: string, minLength: 1 }
+                newPassword: { type: string, minLength: 12 }
+                confirmPassword: { type: string, minLength: 12 }
+      responses:
+        '200':
+          description: Password updated
+          content:
+            text/html:
+              schema: { type: string }
+        '400':
+          description: Validation error (e.g. confirmation mismatch)
+          content:
+            text/html:
+              schema: { type: string }
+        '401':
+          description: Current password incorrect
+          content:
+            text/html:
+              schema: { type: string }
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /admin/earnings:
+    get:
+      tags: [admin]
+      summary: Earnings dashboard (HTML)
+      operationId: getAdminEarnings
+      description: |
+        Renders a Grafana-styled HTML earnings dashboard showing total payments,
+        windowed totals (24h/7d/30d), per-chain breakdown, top agents by call
+        volume, recent payments table with tx links, and a 24h hourly sparkline.
+        Auto-refreshes JSON data every 30s. Requires an authenticated admin
+        session cookie.
+      responses:
+        '200':
+          description: HTML earnings dashboard
+          content:
+            text/html:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /admin/earnings.json:
+    get:
+      tags: [admin]
+      summary: Earnings dashboard data (JSON)
+      operationId: getAdminEarningsJson
+      description: |
+        Returns the raw earnings aggregation powering the HTML dashboard.
+        Requires an authenticated admin session cookie.
+      responses:
+        '200':
+          description: Earnings aggregate
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  generatedAt: { type: string, format: date-time }
+                  totals:
+                    type: object
+                    properties:
+                      payments: { type: integer }
+                      uniqueAgents: { type: integer }
+                      last24h: { type: number }
+                      last7d: { type: number }
+                      last30d: { type: number }
+                  byChain: { type: array, items: { type: object } }
+                  byAgent: { type: array, items: { type: object } }
+                  byResource: { type: array, items: { type: object } }
+                  sparkline: { type: array, items: { type: object } }
+                  recent: { type: array, items: { type: object } }
         '401':
           $ref: '#/components/responses/Unauthorized'
         '429':

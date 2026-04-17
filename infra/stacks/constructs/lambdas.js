@@ -122,6 +122,15 @@ export class Lambdas extends Construct {
     tables.routes.grantReadWriteData(this.dashboardFn);
     tables.usage.grantReadData(this.dashboardFn);
     tables.rateLimit.grantReadWriteData(this.dashboardFn);
+    // Admin login (GET /admin, POST /admin/login, session cookie signing)
+    // needs read on the admin-api-key-hash secret + write on fraud-events
+    // (auditLog writes a record there on every login/logout/action). Without
+    // these the dashboard 500s on login with AccessDeniedException.
+    // grantWrite covers PutSecretValue for self-service password rotation.
+    secrets.adminApiKeyHash.grantRead(this.dashboardFn);
+    secrets.adminApiKeyHash.grantWrite(this.dashboardFn);
+    tables.fraudEvents.grantReadWriteData(this.dashboardFn);
+    tables.fraudTally.grantReadWriteData(this.dashboardFn);
 
     tables.payments.grantReadWriteData(this.apiFn);
     tables.tenants.grantReadWriteData(this.apiFn);
@@ -135,6 +144,8 @@ export class Lambdas extends Construct {
     secrets.agentWallet.grantRead(this.apiFn);
     secrets.baseRpc.grantRead(this.apiFn);
     secrets.adminApiKeyHash.grantRead(this.apiFn);
+    // Exchange secret grants intentionally NOT added — /v1/quote is unrouted
+    // and the 5 exchange adapters are stubs. Re-grant when a real adapter ships.
 
     tables.tenants.grantReadWriteData(this.webhookFn);
     tables.webhookDlq.grantReadWriteData(this.webhookFn);

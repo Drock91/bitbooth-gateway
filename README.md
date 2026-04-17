@@ -5,7 +5,7 @@
 Built on the [x402 protocol](https://x402.gitbook.io) (HTTP 402 Payment Required) from the x402 Foundation (Coinbase + Linux Foundation).
 
 [![MIT license](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-3,317_passing-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-3,306_passing-brightgreen.svg)](#testing)
 [![Node 20](https://img.shields.io/badge/node-20-blue.svg)](https://nodejs.org)
 
 ---
@@ -16,7 +16,7 @@ The flagship agent-native endpoint. **No API key. No signup. Just pay.**
 
 ```bash
 # 1. Hit the endpoint — get a 402 with a payment challenge
-curl -X POST https://x76se73jxd.execute-api.us-east-2.amazonaws.com/staging/v1/fetch \
+curl -X POST https://app.heinrichstech.com/v1/fetch \
   -H "Content-Type: application/json" \
   -d '{"url":"https://example.com","mode":"fast"}'
 
@@ -88,23 +88,28 @@ Agent                         BitBooth                        Your API
 5. BitBooth verifies on-chain, checks replay protection, proxies through
 6. Server responds `200 OK`
 
-One round-trip. Sub-10s on EVM/XRPL/Solana/Stellar. Sub-second on Lightning (Q2 2026 roadmap).
+One round-trip. **Verified end-to-end at 1.3s on XRPL Mainnet and Base Sepolia today.** Other chains have adapter code in the repo and are activated as customers ask.
 
 ## Supported chains
 
 | Network | CAIP-2 | Asset | Status |
 |---|---|---|---|
-| Base Sepolia | `eip155:84532` | USDC | ✅ Live (default) |
-| Base Mainnet | `eip155:8453` | USDC | ✅ Live (opt-in) |
-| XRPL EVM Sidechain | `eip155:1440002` | USDC | ✅ Live |
-| XRPL Mainnet | `xrpl:0` | USDC, RLUSD, XRP | ✅ Live |
-| XRPL Testnet | `xrpl:1` | XRP | ✅ Live |
-| Solana Mainnet | `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp` | USDC-SPL | ✅ Live |
-| Solana Devnet | `solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1` | USDC-SPL | ✅ Live |
-| Stellar Testnet | — | XLM | ✅ Live |
-| Bitcoin Lightning (L402) | — | sats | 🛣 Roadmap Q2 2026 |
+| Base Sepolia | `eip155:84532` | USDC | ✅ Live & end-to-end verified |
+| XRPL Mainnet | `xrpl:0` | XRP | ✅ Live & end-to-end verified |
+| XRPL Mainnet | `xrpl:0` | USDC (Bitstamp issuer) | ✅ Live (verifier wired, no end-to-end test) |
+| XRPL Mainnet | `xrpl:0` | RLUSD (Ripple issuer) | ⚙️ Verifier wired, awaiting trust line |
+| Base Mainnet | `eip155:8453` | USDC | ⚙️ Adapter ready, not enabled in current env |
+| XRPL Testnet | `xrpl:1` | XRP | ⚙️ Adapter ready, not enabled (staging is on mainnet) |
+| Solana Mainnet | `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp` | USDC-SPL | ⚙️ Adapter ready, not yet wired into challenge builder |
+| XRPL EVM Sidechain | `eip155:1440002` | USDC | ⚙️ Adapter ready, not yet wired into challenge builder |
+| Stellar | — | — | 🛣 Not yet implemented |
+| Bitcoin Lightning (L402) | — | sats | 🛣 Roadmap |
 
-Every 402 challenge returns an `accepts[]` array of all enabled chains. The agent picks the rail it already has balance for.
+✅ = a real payment has settled end-to-end on this rail.
+⚙️ = code is in the repo, just needs config / activation.
+🛣 = on the roadmap, not built yet.
+
+Every 402 challenge returns an `accepts[]` array of currently-enabled chains. The agent picks the rail it already has balance for.
 
 ## API
 
@@ -114,7 +119,6 @@ Every 402 challenge returns an `accepts[]` array of all enabled chains. The agen
 | `POST` | `/v1/resource` | API key + x402 | Paywalled resource (tenant-configured pricing) |
 | `POST` | `/v1/resource/premium` | API key + x402 | Premium resource (2× price) |
 | `POST` | `/v1/resource/bulk` | API key + x402 | Bulk operations (amount × item count) |
-| `POST` | `/v1/quote` | API key | Best fiat-to-crypto quote across 5 exchanges |
 | `GET`  | `/v1/payments` | API key | Payment history (cursor pagination) |
 | `GET`  | `/v1/health` | — | Health check |
 | `GET`  | `/v1/health/ready` | — | Readiness (DDB + RPC + secrets) |
@@ -134,12 +138,9 @@ bitbooth-gateway/
 │   │   ├── xrpl/        #   Native XRPL (xrpl.js)
 │   │   ├── xrpl-evm/    #   XRPL EVM Sidechain (ethers)
 │   │   ├── solana/      #   Solana mainnet + devnet (@solana/web3.js)
-│   │   ├── moonpay/     #   Fiat onramp adapters
-│   │   ├── coinbase/
-│   │   ├── kraken/
-│   │   ├── binance/
-│   │   ├── uphold/
 │   │   └── ows/         #   Open Wallet Standard
+│   │   # NOTE: src/adapters/{moonpay,coinbase,kraken,binance,uphold} are
+│   │   # scaffold-only stubs. Not used at runtime. /v1/quote is unrouted.
 │   ├── middleware/      # x402, auth, rate-limit, idempotency, errors, CORS
 │   ├── validators/      # Zod schemas (every boundary validated)
 │   ├── repositories/    # DynamoDB (10 tables)
@@ -150,7 +151,7 @@ bitbooth-gateway/
 │   ├── mcp-fetch/       # @bitbooth/mcp-fetch — MCP server for fetch tool
 │   ├── langchain-bitbooth/  # LangChain tool wrapper
 │   └── bitbooth-py/     # Python client
-├── tests/               # 3,317 unit tests + integration tests
+├── tests/               # 3,306 unit tests + integration tests
 ├── scripts/             # Smoke tests, load tests, ops tools
 └── docs/                # Deploy guide, integration guide, ADRs
 ```
@@ -159,35 +160,34 @@ bitbooth-gateway/
 
 - **Runtime:** Node 20, pure JavaScript (ESM), no TypeScript
 - **Cloud:** AWS Lambda, API Gateway, DynamoDB, Secrets Manager, CloudWatch, WAF
-- **Chains:** XRPL, XRPL EVM, Solana, Base, Stellar
+- **Chains:** XRPL Mainnet + Base Sepolia (live), XRPL EVM + Solana (adapter code in repo, awaiting activation)
 - **Protocol:** x402 V2 (HTTP 402 Payment Required)
 - **Validation:** Zod at every boundary
-- **Testing:** Vitest — 3,317 tests, 99%+ coverage
+- **Testing:** Vitest — 3,306 tests, all passing
 - **Infra:** AWS CDK (stage-aware: dev/staging/prod)
 - **Deploy:** esbuild bundles per-Lambda, `cdk deploy`
 
 ## What's built
 
-- **x402 V2 protocol** — challenge/response with signature verification, nonce-based replay protection, on-chain settlement
-- **Multi-chain routing** — single API, multiple rails. Agent picks based on wallet balance
-- **Agent-native endpoint** (`/v1/fetch`) — zero signup, zero API key, pure pay-per-call
-- **Multi-tenant SaaS** — self-service signup, API keys, per-route pricing
-- **Fiat onramping** — best-quote routing across Moonpay, Coinbase, Kraken, Binance, Uphold
-- **Fraud prevention** — velocity rules, nonce tracking, amount bounds, configurable thresholds
-- **Rate limiting** — token bucket, 4 tiers (Free/Starter/Growth/Scale), plus per-IP for anonymous callers
-- **Idempotency** — 24h result caching via DynamoDB TTL
-- **Webhook DLQ** — retry with exponential backoff, max-age cleanup
-- **Client portal** — session-based auth, plan/usage dashboard, payment history
-- **Admin dashboard** — tenant management, suspend/reactivate, metrics
-- **Observability** — CloudWatch Synthetics canary, alarms, structured pino logging with redaction
-- **Swagger UI + OpenAPI 3.0**
+- **x402 V2 protocol** — challenge/response with nonce-based replay protection, on-chain settlement. **Verified end-to-end on live staging** (Base Sepolia USDC + XRPL mainnet XRP, 1-8s round-trip).
+- **Multi-chain routing** — single API, multiple rails advertised in each 402 challenge. Agent picks based on wallet balance.
+- **Agent-native endpoint** (`/v1/fetch`) — zero signup, zero API key, pure pay-per-call. Returns clean markdown.
+- **Multi-tenant SaaS** — self-service signup, API keys, per-route pricing, session-based client portal.
+- **Fiat onramping** — *not implemented yet.* The repo contains scaffold adapters for Moonpay / Coinbase / Kraken / Binance / Uphold, but they're stubs that don't make real HTTP calls. `/v1/quote` is intentionally unrouted until a real adapter ships. **Today BitBooth is crypto-in only**: agents pay from a wallet they already control.
+- **Fraud prevention** — velocity rules, nonce tracking, amount bounds, configurable thresholds.
+- **Rate limiting** — token bucket, 4 tiers (Free/Starter/Growth/Scale), per-IP for anonymous callers.
+- **Idempotency** — 24h result caching via DynamoDB TTL.
+- **Admin console** — branded admin at `app.heinrichstech.com/admin` with Tenants, Metrics, Earnings (Grafana-style), self-service password rotation.
+- **Webhook DLQ** — retry with exponential backoff, max-age cleanup.
+- **Observability** — CloudWatch Synthetics canary, alarms, structured pino logging with redaction.
+- **OpenAPI 3.0** spec at `/openapi.yaml`, auto-validated against live routes in CI.
 
 ## Quick start
 
 ```bash
 npm install           # install deps
 npm run lint          # eslint --max-warnings=0
-npm test              # 3,317 tests, ~20s
+npm test              # 3,306 tests, ~20s
 npm run build         # esbuild bundles to dist/
 npm run cdk:synth     # validates CDK stack (STAGE=dev)
 ```
@@ -207,9 +207,9 @@ Full walkthrough in [`docs/DEPLOY.md`](docs/DEPLOY.md).
 ## Testing
 
 ```bash
-npm test                          # run all 3,317 unit tests
+npm test                          # run all 3,306 unit tests
 npm run test:integration          # requires LocalStack + testnet RPC
-npm run test:coverage             # coverage report (must be ≥80% on services/ and middleware/)
+npm run test:coverage             # coverage report (target ≥80% on services/ and middleware/)
 ```
 
 ## Docs
@@ -226,7 +226,7 @@ npm run test:coverage             # coverage report (must be ≥80% on services/
 
 - No secrets in code — all loaded from AWS Secrets Manager at cold start
 - Least-privilege IAM per Lambda
-- x402 endpoints verify signature, check nonce, enforce replay window ≤ 120s
+- x402 endpoints verify the on-chain transaction, check nonce against DDB for replay protection, enforce a ≤ 120s payment window
 - Webhooks verify HMAC before any business logic
 - Logger redacts API keys, private keys, signed payloads
 - Input size limits: JSON body ≤ 100KB unless explicitly opted in
@@ -239,7 +239,7 @@ See [`CLAUDE.md`](CLAUDE.md#security) for the full security posture.
 This is a working open-source x402 reference gateway. PRs welcome. Before opening one:
 
 1. `npm run lint` must pass with zero warnings
-2. `npm test` must pass all 3,317 tests
+2. `npm test` must pass all 3,306 tests
 3. `npm audit --audit-level=high` must return 0
 4. Add Zod validators for any new request shape
 5. No TypeScript — this is pure JavaScript + JSDoc typedefs (see [`CLAUDE.md`](CLAUDE.md#coding-style))
@@ -253,7 +253,7 @@ This is a working open-source x402 reference gateway. PRs welcome. Before openin
 **Links**
 
 - [Live demo (6-chain race)](https://heinrichstech.com/bitbooth.html)
-- [Live staging API](https://x76se73jxd.execute-api.us-east-2.amazonaws.com/staging/v1/fetch)
+- [Live staging API](https://app.heinrichstech.com/v1/fetch)
 - [@bitbooth/mcp-fetch on npm](https://www.npmjs.com/package/@bitbooth/mcp-fetch)
 - [x402 V2 spec (Coinbase + Linux Foundation)](https://x402.gitbook.io)
 - [.well-known/agent.json](https://heinrichstech.com/.well-known/agent.json)

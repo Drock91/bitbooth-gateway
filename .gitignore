@@ -9,3 +9,8 @@ coverage/
 .agent/last-tick.log
 .DS_Store
 *.log
+
+# Claude Code per-user config (local permissions, not for public repo)
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+packages/mcp-fetch/servers/

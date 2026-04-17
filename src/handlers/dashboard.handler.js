@@ -27,9 +27,13 @@ import {
   getAdminLogout,
   listTenantsUI,
   getAdminMetricsUI,
+  getAdminChangePassword,
+  postAdminChangePassword,
 } from '../controllers/admin.controller.js';
 import { withRequestLogging } from '../middleware/request-log.middleware.js';
 import { toHttpResponse } from '../middleware/error.middleware.js';
+import { logger } from '../lib/logger.js';
+import { stagePrefix } from '../lib/stage-prefix.js';
 import { withApiVersion } from '../middleware/versioning.middleware.js';
 import { withBodySizeLimit } from '../middleware/body-size.middleware.js';
 import { withGracefulShutdown } from '../middleware/shutdown.middleware.js';
@@ -58,6 +62,8 @@ const routes = {
   'GET /admin/logout': getAdminLogout,
   'GET /admin/tenants/ui': listTenantsUI,
   'GET /admin/metrics/ui': getAdminMetricsUI,
+  'GET /admin/change-password': getAdminChangePassword,
+  'POST /admin/change-password': postAdminChangePassword,
 };
 
 const jsonRoutes = new Set([
@@ -89,8 +95,24 @@ export const handler = withGracefulShutdown(
           try {
             return await matched(event);
           } catch (err) {
+            logger.error(
+              { err: { name: err?.name, message: err?.message, stack: err?.stack }, route: key },
+              'dashboard handler error',
+            );
             if (jsonRoutes.has(key)) {
               return toHttpResponse(err);
+            }
+            // For HTML routes: 401s redirect to login, everything else 500.
+            // Match on numeric status (not class name — esbuild minifies names).
+            if (err?.status === 401 || err?.statusCode === 401 || err?.code === 'UNAUTHORIZED') {
+              return {
+                statusCode: 303,
+                headers: {
+                  location: `${stagePrefix(event)}/admin`,
+                  'cache-control': 'no-store',
+                },
+                body: '',
+              };
             }
             return {
               statusCode: 500,
