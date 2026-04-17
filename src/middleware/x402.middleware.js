@@ -130,7 +130,11 @@ function buildChallenge(route, payTo) {
   }
 
   if (cfg.xrpl) {
-    const network = cfg.stage === 'prod' ? 'xrpl:0' : 'xrpl:1';
+    // XRPL network: defaults to xrpl:0 (mainnet) on prod, xrpl:1 (testnet)
+    // elsewhere. Overridable via XRPL_NETWORK env var so staging can advertise
+    // mainnet XRPL when the configured XRPL_PAY_TO is a funded mainnet wallet.
+    const network =
+      process.env.XRPL_NETWORK || (cfg.stage === 'prod' ? 'xrpl:0' : 'xrpl:1');
     accepts.push({
       scheme: 'exact',
       network,

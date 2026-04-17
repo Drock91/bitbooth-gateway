@@ -83,6 +83,19 @@ export class X402Stack extends Stack {
       DLQ_SWEEP_BATCH_SIZE: '25',
       DLQ_BASE_DELAY_MS: '300000',
       DLQ_MAX_DELAY_MS: '14400000',
+      // XRPL mainnet opt-in: if XRPL_PAY_TO is set in the CDK deploy env,
+      // the x402 middleware will include XRPL in every 402 accepts[] array.
+      // Defaults to mainnet (xrpl:0) unless XRPL_NETWORK overrides.
+      ...(process.env.XRPL_PAY_TO ? { XRPL_PAY_TO: process.env.XRPL_PAY_TO } : {}),
+      ...(process.env.XRPL_USDC_ISSUER
+        ? { XRPL_USDC_ISSUER: process.env.XRPL_USDC_ISSUER }
+        : {}),
+      ...(process.env.XRPL_RLUSD_ISSUER
+        ? { XRPL_RLUSD_ISSUER: process.env.XRPL_RLUSD_ISSUER }
+        : {}),
+      ...(process.env.XRPL_NETWORK
+        ? { XRPL_NETWORK: process.env.XRPL_NETWORK }
+        : {}),
     };
 
     const lambdas = new Lambdas(this, 'Lambdas', { stage, tables, secrets, commonEnv });
