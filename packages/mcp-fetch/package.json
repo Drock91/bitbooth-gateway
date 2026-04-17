@@ -8,12 +8,12 @@
   "author": "Derek Heinrichs",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Drock91/BitBooth.git",
+    "url": "https://github.com/Drock91/bitbooth-gateway.git",
     "directory": "packages/mcp-fetch"
   },
-  "homepage": "https://github.com/Drock91/BitBooth/tree/main/packages/mcp-fetch",
+  "homepage": "https://github.com/Drock91/bitbooth-gateway/tree/main/packages/mcp-fetch",
   "bugs": {
-    "url": "https://github.com/Drock91/BitBooth/issues"
+    "url": "https://github.com/Drock91/bitbooth-gateway/issues"
   },
   "publishConfig": {
     "access": "public"
