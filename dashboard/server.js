@@ -48,10 +48,12 @@ async function body(req) {
   return JSON.parse(Buffer.concat(chunks).toString());
 }
 
-// Parse goals from GOALS.md
+// Parse goals from GOALS.md. Matches table rows like:
+//   | G-001 | P0 | done | 30m | Title |
+// Priorities P0-P4 (was P0-P2 — extended to cover stretch / future tiers).
 function parseGoals(md) {
   const re =
-    /^\|\s*(G-\d+)\s*\|\s*(P[012])\s*\|\s*(open|in_progress|done|blocked)\s*\|\s*(\d+)m\s*\|\s*([^|]+?)\s*\|/;
+    /^\|\s*(G-\d+[a-z]?)\s*\|\s*(P[0-4])\s*\|\s*(open|in_progress|done|blocked)\s*\|\s*(\d+)m\s*\|\s*([^|]+?)\s*\|/;
   return md
     .split('\n')
     .filter((l) => re.test(l))
