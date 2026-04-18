@@ -22,15 +22,13 @@ import {
   getPortalIntegrate,
   postPortalRotateKey,
 } from '../controllers/portal.controller.js';
+import { getAdmin, postAdminLogin, getAdminLogout } from '../controllers/admin.login.controller.js';
+import { listTenantsUI } from '../controllers/admin.tenants.controller.js';
+import { getAdminMetricsUI } from '../controllers/admin.metrics.controller.js';
 import {
-  getAdmin,
-  postAdminLogin,
-  getAdminLogout,
-  listTenantsUI,
-  getAdminMetricsUI,
   getAdminChangePassword,
   postAdminChangePassword,
-} from '../controllers/admin.controller.js';
+} from '../controllers/admin.password.controller.js';
 import { withRequestLogging } from '../middleware/request-log.middleware.js';
 import { toHttpResponse } from '../middleware/error.middleware.js';
 import { logger } from '../lib/logger.js';

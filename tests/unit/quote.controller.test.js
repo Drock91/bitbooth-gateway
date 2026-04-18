@@ -28,7 +28,7 @@ vi.mock('../../src/validators/exchange.schema.js', async () => {
       fiatCurrency: z.enum(['USD', 'EUR', 'GBP']),
       fiatAmount: z.number().positive().max(50000),
       cryptoAsset: z.enum(['USDC', 'XRP', 'ETH']),
-      exchange: z.enum(['moonpay', 'coinbase', 'kraken', 'binance', 'uphold']).optional(),
+      exchange: z.string().min(1).optional(),
     }),
   };
 });
@@ -199,8 +199,8 @@ describe('postQuote', () => {
     );
   });
 
-  it('throws ValidationError for invalid exchange name', async () => {
-    await expect(postQuote(makeEvent({ ...validInput, exchange: 'unknown' }))).rejects.toThrow(
+  it('rejects empty string exchange name', async () => {
+    await expect(postQuote(makeEvent({ ...validInput, exchange: '' }))).rejects.toThrow(
       'Invalid request',
     );
   });
@@ -235,12 +235,10 @@ describe('postQuote', () => {
     }
   });
 
-  it('accepts all valid exchange values', async () => {
-    for (const ex of ['moonpay', 'coinbase', 'kraken', 'binance', 'uphold']) {
-      mockGetBest.mockResolvedValueOnce({});
-      const res = await postQuote(makeEvent({ ...validInput, exchange: ex }));
-      expect(res.statusCode).toBe(200);
-    }
+  it('accepts any non-empty exchange string', async () => {
+    mockGetBest.mockResolvedValueOnce({});
+    const res = await postQuote(makeEvent({ ...validInput, exchange: 'some-adapter' }));
+    expect(res.statusCode).toBe(200);
   });
 
   it('works without exchange field (optional)', async () => {

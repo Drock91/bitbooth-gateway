@@ -300,8 +300,9 @@ paths:
       operationId: postFetch
       description: |
         Pay-per-scrape endpoint for AI agents. Fetches the given URL, extracts
-        article content via Mozilla Readability (full mode) or raw HTML (fast mode),
-        and converts to Markdown via Turndown. Price: $0.005 USDC per request.
+        article content via Mozilla Readability (full mode), raw HTML (fast mode),
+        or JS-rendered SPA content via Playwright (render mode), and converts to
+        Markdown via Turndown. Price: $0.005 USDC (fast/full) or $0.02 USDC (render).
 
         This endpoint is x402-paywalled. On first request, the server returns
         **402** with a multi-chain challenge. The client pays on Base (EVM) or
@@ -1410,9 +1411,9 @@ components:
           example: https://example.com/article
         mode:
           type: string
-          enum: [fast, full]
+          enum: [fast, full, render]
           default: fast
-          description: fast = raw HTML→Markdown; full = Readability article extraction
+          description: fast = raw HTML→Markdown; full = Readability extraction; render = Playwright JS rendering ($0.02)
 
     FetchResponse:
       type: object

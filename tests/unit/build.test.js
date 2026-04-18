@@ -110,7 +110,7 @@ describe('scripts/build.js', () => {
     expect(config.platform).toBe('node');
     expect(config.target).toBe('node20');
     expect(config.format).toBe('esm');
-    expect(config.external).toEqual(['@aws-sdk/*']);
+    expect(config.external).toEqual(['@aws-sdk/*', '@sparticuz/chromium', 'playwright-core']);
     expect(config.minify).toBe(true);
     expect(config.treeShaking).toBe(true);
     expect(config.sourcemap).toBe(false);

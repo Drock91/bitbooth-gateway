@@ -1,26 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { UpstreamError } from '../../src/lib/errors.js';
 
-const { mockXrplEvmVerify, mockBaseVerify, mockNativeXrplVerify, mockAdapters, mockGetConfig } =
-  vi.hoisted(() => ({
+const { mockXrplEvmVerify, mockBaseVerify, mockNativeXrplVerify, mockGetConfig } = vi.hoisted(
+  () => ({
     mockXrplEvmVerify: vi.fn(),
     mockBaseVerify: vi.fn(),
     mockNativeXrplVerify: vi.fn(),
     mockGetConfig: vi.fn(() => ({ xrpl: undefined })),
-    mockAdapters: {
-      moonpay: { name: 'moonpay', quote: vi.fn() },
-      coinbase: { name: 'coinbase', quote: vi.fn() },
-      kraken: { name: 'kraken', quote: vi.fn() },
-      binance: { name: 'binance', quote: vi.fn() },
-      uphold: { name: 'uphold', quote: vi.fn() },
-    },
-  }));
+  }),
+);
 
-vi.mock('../../src/adapters/moonpay/index.js', () => ({ moonpayAdapter: mockAdapters.moonpay }));
-vi.mock('../../src/adapters/coinbase/index.js', () => ({ coinbaseAdapter: mockAdapters.coinbase }));
-vi.mock('../../src/adapters/kraken/index.js', () => ({ krakenAdapter: mockAdapters.kraken }));
-vi.mock('../../src/adapters/binance/index.js', () => ({ binanceAdapter: mockAdapters.binance }));
-vi.mock('../../src/adapters/uphold/index.js', () => ({ upholdAdapter: mockAdapters.uphold }));
 vi.mock('../../src/adapters/xrpl-evm/index.js', () => ({ verifyPayment: mockXrplEvmVerify }));
 vi.mock('../../src/adapters/base/index.js', () => ({
   verifyPayment: mockBaseVerify,
@@ -42,21 +31,6 @@ import {
   listChainNetworks,
 } from '../../src/services/routing.service.js';
 
-function fakeQuote(exchange, cryptoAmount, feeFiat) {
-  return {
-    exchange,
-    fiatCurrency: 'USD',
-    fiatAmount: 100,
-    cryptoAmount: String(cryptoAmount),
-    cryptoAsset: 'USDC',
-    feeFiat,
-    expiresAt: Math.floor(Date.now() / 1000) + 60,
-    quoteId: `${exchange}_q1`,
-  };
-}
-
-const INPUT = { fiatCurrency: 'USD', fiatAmount: 100, cryptoAsset: 'USDC' };
-
 describe('routing.service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -64,101 +38,17 @@ describe('routing.service', () => {
   });
 
   describe('getAdapter', () => {
-    it('returns the moonpay adapter by name', () => {
-      expect(getAdapter('moonpay')).toBe(mockAdapters.moonpay);
-    });
-
-    it('returns the coinbase adapter by name', () => {
-      expect(getAdapter('coinbase')).toBe(mockAdapters.coinbase);
-    });
-
-    it('returns undefined for unknown exchange', () => {
+    it('returns undefined for any name (registry is empty after stub deletion)', () => {
+      expect(getAdapter('moonpay')).toBeUndefined();
       expect(getAdapter('nonexistent')).toBeUndefined();
-    });
-
-    it('returns each registered adapter', () => {
-      for (const name of ['moonpay', 'coinbase', 'kraken', 'binance', 'uphold']) {
-        expect(getAdapter(name)).toBe(mockAdapters[name]);
-      }
     });
   });
 
   describe('bestQuote', () => {
-    it('returns the quote with highest net value (cryptoAmount - feeFiat)', async () => {
-      mockAdapters.moonpay.quote.mockResolvedValue(fakeQuote('moonpay', 99, 1.49));
-      mockAdapters.coinbase.quote.mockResolvedValue(fakeQuote('coinbase', 99.5, 0.99));
-      mockAdapters.kraken.quote.mockResolvedValue(fakeQuote('kraken', 98, 0.5));
-      mockAdapters.binance.quote.mockResolvedValue(fakeQuote('binance', 97, 0.1));
-      mockAdapters.uphold.quote.mockResolvedValue(fakeQuote('uphold', 98, 1.0));
-
-      const result = await bestQuote(INPUT);
-      // coinbase: 99.5 - 0.99 = 98.51 (best)
-      expect(result.exchange).toBe('coinbase');
-      expect(result.cryptoAmount).toBe('99.5');
-    });
-
-    it('ignores adapters that reject and picks from remaining', async () => {
-      mockAdapters.moonpay.quote.mockRejectedValue(new Error('upstream down'));
-      mockAdapters.coinbase.quote.mockRejectedValue(new Error('timeout'));
-      mockAdapters.kraken.quote.mockResolvedValue(fakeQuote('kraken', 95, 0.5));
-      mockAdapters.binance.quote.mockResolvedValue(fakeQuote('binance', 96, 2.0));
-      mockAdapters.uphold.quote.mockRejectedValue(new Error('not configured'));
-
-      const result = await bestQuote(INPUT);
-      // kraken: 95 - 0.5 = 94.5, binance: 96 - 2.0 = 94.0
-      expect(result.exchange).toBe('kraken');
-    });
-
-    it('throws UpstreamError when all adapters reject', async () => {
-      for (const a of Object.values(mockAdapters)) {
-        a.quote.mockRejectedValue(new Error('fail'));
-      }
-      await expect(bestQuote(INPUT)).rejects.toThrow(UpstreamError);
-      await expect(bestQuote(INPUT)).rejects.toThrow('Upstream exchange failed');
-    });
-
-    it('returns single successful quote when only one adapter succeeds', async () => {
-      mockAdapters.moonpay.quote.mockRejectedValue(new Error('fail'));
-      mockAdapters.coinbase.quote.mockRejectedValue(new Error('fail'));
-      mockAdapters.kraken.quote.mockRejectedValue(new Error('fail'));
-      mockAdapters.binance.quote.mockRejectedValue(new Error('fail'));
-      mockAdapters.uphold.quote.mockResolvedValue(fakeQuote('uphold', 99, 1.0));
-
-      const result = await bestQuote(INPUT);
-      expect(result.exchange).toBe('uphold');
-    });
-
-    it('calls all 5 adapters with the input', async () => {
-      for (const a of Object.values(mockAdapters)) {
-        a.quote.mockResolvedValue(fakeQuote(a.name, 99, 1.0));
-      }
-      await bestQuote(INPUT);
-      for (const a of Object.values(mockAdapters)) {
-        expect(a.quote).toHaveBeenCalledWith(INPUT);
-      }
-    });
-
-    it('handles tie in net value by picking first in reduce order', async () => {
-      // All adapters return identical net value
-      for (const a of Object.values(mockAdapters)) {
-        a.quote.mockResolvedValue(fakeQuote(a.name, 99, 1.0));
-      }
-      const result = await bestQuote(INPUT);
-      // reduce keeps `best` when equal, so first adapter wins
-      expect(result).toBeDefined();
-      expect(Number(result.cryptoAmount)).toBe(99);
-    });
-
-    it('handles zero feeFiat correctly', async () => {
-      mockAdapters.moonpay.quote.mockResolvedValue(fakeQuote('moonpay', 100, 0));
-      mockAdapters.coinbase.quote.mockResolvedValue(fakeQuote('coinbase', 101, 1.5));
-      mockAdapters.kraken.quote.mockRejectedValue(new Error('fail'));
-      mockAdapters.binance.quote.mockRejectedValue(new Error('fail'));
-      mockAdapters.uphold.quote.mockRejectedValue(new Error('fail'));
-
-      const result = await bestQuote(INPUT);
-      // moonpay: 100 - 0 = 100, coinbase: 101 - 1.5 = 99.5
-      expect(result.exchange).toBe('moonpay');
+    it('throws UpstreamError when registry is empty', async () => {
+      await expect(
+        bestQuote({ fiatCurrency: 'USD', fiatAmount: 100, cryptoAsset: 'USDC' }),
+      ).rejects.toThrow(UpstreamError);
     });
   });
 

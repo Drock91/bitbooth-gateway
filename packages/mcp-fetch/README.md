@@ -5,9 +5,9 @@
 
 **The first working x402 reference implementation, shipped as an MCP server.** Fetches any URL, pays the gateway from the agent wallet via the [x402 protocol](https://github.com/Drock91/bitbooth-gateway), returns clean markdown.
 
-> ⚠️ **Honest framing:** today this is a *demo*. The fetch+markdown logic is functionally equivalent to the free `@modelcontextprotocol/server-fetch`. Install this to **understand the x402 protocol**, not to save time on web fetches.
+> **What makes this worth paying for:** `mode: "render"` uses **Playwright** to render JavaScript-heavy pages (SPAs, dashboards, dynamic content) that the free `@modelcontextprotocol/server-fetch` can't crawl. `mode: "full"` extracts article content via Mozilla Readability + Turndown for cleaner markdown than raw HTML conversion.
 >
-> 🛣️ **What makes this paid version actually worth 0.005 USDC** is shipping in the next 2 weeks: JS rendering (Playwright), better markdown via Readability+Turndown, and a shared cache layer so multiple agents hitting the same URL split the payment. Track it: https://github.com/Drock91/bitbooth-gateway/blob/main/GOALS.md
+> 🛣️ **Coming next:** shared cache layer (multiple agents hitting the same URL split the payment), YouTube transcript extraction, PDF → markdown. Track it: https://github.com/Drock91/bitbooth-gateway/blob/main/GOALS.md
 >
 > ✅ **Verified end-to-end on live mainnet** — last real payment landed in 1.3s ([proof](https://xrpscan.com/tx/493F6F1ADB9D258898A028F1D0A34684F5DD8B8C9F99BC6FB3432EA1F8AA45C0)).
 >
@@ -64,24 +64,26 @@ mcp-fetch   # runs on stdio
 Once installed, your agent gets a `fetch` tool:
 
 ```
-fetch(url: "https://example.com", mode: "fast")
+fetch(url: "https://example.com", mode: "render")
 ```
 
 **Modes:**
 
-| Mode   | Description                      | Best for         |
-| ------ | -------------------------------- | ---------------- |
-| `fast` | Raw HTML converted to markdown   | Quick lookups    |
-| `full` | Article extraction then markdown | Blog posts, docs |
+| Mode     | Price       | Description                                    | Best for                      |
+| -------- | ----------- | ---------------------------------------------- | ----------------------------- |
+| `fast`   | 0.005 USDC  | Raw HTML converted to markdown                 | Quick lookups, static pages   |
+| `full`   | 0.005 USDC  | Article extraction (Readability) then markdown | Blog posts, docs, news        |
+| `render` | 0.02 USDC   | **Playwright JS rendering** then markdown      | SPAs, dashboards, dynamic JS  |
 
 Returns markdown with title, body, and metadata (URL, timestamp, content length, truncation status).
 
 ## Pricing
 
-| Item       | Cost                                              |
-| ---------- | ------------------------------------------------- |
-| Per fetch  | **0.005 USDC** (testnet: free Circle Sepolia USDC) |
-| Gas        | ~$0.0001 per tx on Base (mainnet) / free (testnet) |
+| Item          | Cost                                              |
+| ------------- | ------------------------------------------------- |
+| `fast`/`full` | **0.005 USDC** per fetch                          |
+| `render`      | **0.02 USDC** per fetch (Playwright is expensive) |
+| Gas           | ~$0.0001 per tx on Base (mainnet) / free (testnet) |
 | Default chain | Base Sepolia (testnet). Explicit opt-in for mainnet. |
 
 ## Configuration

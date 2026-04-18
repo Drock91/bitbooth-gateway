@@ -172,8 +172,53 @@ function currentOpenGoal() {
   }
 }
 
+/**
+ * Try to recover NORTH_STAR.json from git history when the file is missing
+ * on disk. Walks recent commits on the current branch, then origin/main, and
+ * returns the most recent committed version with at least one truthy progress
+ * flag (deployed_staging, demo_ready, etc.) or non-zero counter. This avoids
+ * silently overwriting real shipped state with all-false defaults whenever
+ * the file gets deleted (worktree swap, branch checkout, fresh clone).
+ */
+function recoverNorthStarFromGit() {
+  const refs = ['HEAD', 'origin/x402-api-gateway', 'origin/main'];
+  for (const ref of refs) {
+    try {
+      const raw = execSync(`git show ${ref}:.agent/NORTH_STAR.json`, {
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+      });
+      const parsed = JSON.parse(raw);
+      const looksReal =
+        parsed.deployed_staging === true ||
+        parsed.deployed_prod === true ||
+        parsed.demo_ready === true ||
+        parsed.first_real_tenant === true ||
+        Number(parsed.real_402_issued_count) > 0 ||
+        Number(parsed.real_usdc_settled_count) > 0;
+      if (looksReal) {
+        log(`recovered NORTH_STAR from ${ref}`);
+        return parsed;
+      }
+    } catch {
+      /* ref doesn't exist or file not present in that ref */
+    }
+  }
+  return null;
+}
+
 function ensureNorthStar() {
   if (!fs.existsSync(NORTH_STAR_PATH)) {
+    // Before silently resetting to all-false defaults (which trips the
+    // polish-vs-ship hard gate forever), check git history for the most
+    // recent committed NORTH_STAR with real progress flags. This is the
+    // failsafe that survives worktree swaps + fresh clones.
+    const recovered = recoverNorthStarFromGit();
+    if (recovered) {
+      const restored = { ...recovered, last_updated: new Date().toISOString() };
+      fs.writeFileSync(NORTH_STAR_PATH, JSON.stringify(restored, null, 2));
+      return restored;
+    }
     const init = { ...DEFAULT_NORTH_STAR, last_updated: new Date().toISOString() };
     fs.writeFileSync(NORTH_STAR_PATH, JSON.stringify(init, null, 2));
     return init;

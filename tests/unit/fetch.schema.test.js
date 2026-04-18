@@ -16,6 +16,10 @@ describe('fetch.schema', () => {
       expect(FetchMode.safeParse('full')).toMatchObject({ success: true, data: 'full' });
     });
 
+    it('accepts "render"', () => {
+      expect(FetchMode.safeParse('render')).toMatchObject({ success: true, data: 'render' });
+    });
+
     it('rejects unknown mode', () => {
       expect(FetchMode.safeParse('turbo').success).toBe(false);
     });
@@ -49,6 +53,12 @@ describe('fetch.schema', () => {
       const res = FetchRequest.safeParse({ url: 'https://example.com/page', mode: 'full' });
       expect(res.success).toBe(true);
       expect(res.data.mode).toBe('full');
+    });
+
+    it('accepts valid url with render mode', () => {
+      const res = FetchRequest.safeParse({ url: 'https://spa.example.com', mode: 'render' });
+      expect(res.success).toBe(true);
+      expect(res.data.mode).toBe('render');
     });
 
     it('accepts http urls', () => {

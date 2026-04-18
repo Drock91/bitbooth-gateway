@@ -35,15 +35,6 @@ const SECRETS = [
     label: 'Admin API key hash',
     hasRawKey: true,
   },
-  ...['moonpay', 'coinbase', 'kraken', 'binance', 'uphold'].map((name) => ({
-    key: `exchanges/${name}`,
-    generate: () =>
-      JSON.stringify({
-        apiKey: randomBytes(24).toString('base64url'),
-        webhookSecret: randomBytes(32).toString('base64url'),
-      }),
-    label: `${name[0].toUpperCase() + name.slice(1)} exchange credentials`,
-  })),
 ];
 
 function parseArgs(argv) {

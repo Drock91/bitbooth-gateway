@@ -39,7 +39,7 @@ const result = await esbuild.build({
   target: 'node20',
   format: 'esm',
   outdir: dist,
-  external: ['@aws-sdk/*'],
+  external: ['@aws-sdk/*', '@sparticuz/chromium', 'playwright-core'],
   minify: true,
   treeShaking: true,
   sourcemap: false,

@@ -49,12 +49,18 @@ const mockPostAdminLogin = vi.fn();
 const mockGetAdminLogout = vi.fn();
 const mockListTenantsUI = vi.fn();
 const mockGetAdminMetricsUI = vi.fn();
-vi.mock('../../src/controllers/admin.controller.js', () => ({
+vi.mock('../../src/controllers/admin.login.controller.js', () => ({
   getAdmin: (...args) => mockGetAdmin(...args),
   postAdminLogin: (...args) => mockPostAdminLogin(...args),
   getAdminLogout: (...args) => mockGetAdminLogout(...args),
+}));
+vi.mock('../../src/controllers/admin.tenants.controller.js', () => ({
   listTenantsUI: (...args) => mockListTenantsUI(...args),
+}));
+vi.mock('../../src/controllers/admin.metrics.controller.js', () => ({
   getAdminMetricsUI: (...args) => mockGetAdminMetricsUI(...args),
+}));
+vi.mock('../../src/controllers/admin.password.controller.js', () => ({
   getAdminChangePassword: vi.fn().mockResolvedValue({ statusCode: 200, body: 'change-pw-page' }),
   postAdminChangePassword: vi.fn().mockResolvedValue({ statusCode: 200, body: 'updated' }),
 }));

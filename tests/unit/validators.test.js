@@ -692,12 +692,13 @@ describe('fraud.schema', () => {
 
 describe('exchange.schema', () => {
   describe('SupportedExchange', () => {
-    it.each(['moonpay', 'coinbase', 'kraken', 'binance', 'uphold'])('accepts "%s"', (ex) => {
-      expect(SupportedExchange.parse(ex)).toBe(ex);
+    it('accepts any non-empty string (stub adapters deleted)', () => {
+      expect(SupportedExchange.parse('moonpay')).toBe('moonpay');
+      expect(SupportedExchange.parse('custom-adapter')).toBe('custom-adapter');
     });
 
-    it('rejects unknown exchange', () => {
-      expect(() => SupportedExchange.parse('ftx')).toThrow();
+    it('rejects empty string', () => {
+      expect(() => SupportedExchange.parse('')).toThrow();
     });
   });
 

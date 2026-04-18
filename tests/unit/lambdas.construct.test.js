@@ -38,11 +38,6 @@ function buildStack(stage = 'dev') {
     baseRpc: mkSecret(stack, 'BaseRpc'),
     adminApiKeyHash: mkSecret(stack, 'AdminApiKeyHash'),
     stripeWebhook: mkSecret(stack, 'StripeWebhook'),
-    moonpay: mkSecret(stack, 'Moonpay'),
-    coinbase: mkSecret(stack, 'Coinbase'),
-    kraken: mkSecret(stack, 'Kraken'),
-    binance: mkSecret(stack, 'Binance'),
-    uphold: mkSecret(stack, 'Uphold'),
   };
 
   const commonEnv = { STAGE: stage, LOG_LEVEL: 'info' };
@@ -177,10 +172,10 @@ describe('Lambdas construct — memory and timeout', () => {
     expect(fn.Timeout).toBe(10);
   });
 
-  it('fetchFn has 512 MB memory and 15s timeout', () => {
+  it('fetchFn has 2048 MB memory and 30s timeout for Playwright rendering', () => {
     const fn = findFnByName(template, 'x402-fetch-');
-    expect(fn.MemorySize).toBe(512);
-    expect(fn.Timeout).toBe(15);
+    expect(fn.MemorySize).toBe(2048);
+    expect(fn.Timeout).toBe(30);
   });
 });
 
@@ -422,12 +417,10 @@ describe('Lambdas construct — IAM grants', () => {
     expect(allActions).toEqual(expect.arrayContaining(['dynamodb:GetItem', 'dynamodb:PutItem']));
   });
 
-  it('dlqSweepFn gets SecretManager read on exchange secrets', () => {
+  it('dlqSweepFn gets DynamoDB access on webhookDlq', () => {
     const sweepPolicies = findPoliciesForFn('DlqSweep');
     const allActions = sweepPolicies.flatMap(([, p]) => extractActions(p));
-    expect(allActions).toEqual(
-      expect.arrayContaining(['secretsmanager:GetSecretValue', 'secretsmanager:DescribeSecret']),
-    );
+    expect(allActions).toEqual(expect.arrayContaining(['dynamodb:GetItem', 'dynamodb:PutItem']));
   });
 
   it('apiFn gets DynamoDB access on 9 tables', () => {
@@ -454,7 +447,7 @@ describe('Lambdas construct — IAM grants', () => {
     expect(allActions).toEqual(expect.arrayContaining(['dynamodb:GetItem', 'dynamodb:PutItem']));
   });
 
-  it('webhookFn gets Secrets Manager read on stripeWebhook + exchange secrets', () => {
+  it('webhookFn gets Secrets Manager read on stripeWebhook', () => {
     const webhookPolicies = findPoliciesForFn('WebhookFn');
     const allActions = webhookPolicies.flatMap(([, p]) => extractActions(p));
     expect(allActions).toEqual(expect.arrayContaining(['secretsmanager:GetSecretValue']));

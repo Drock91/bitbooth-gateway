@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const FetchMode = z.enum(['fast', 'full']);
+export const FetchMode = z.enum(['fast', 'full', 'render']);
 
 export const FetchRequest = z.object({
   url: z.string().url(),

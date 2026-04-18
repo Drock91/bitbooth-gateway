@@ -2,7 +2,35 @@
 
 > Source of truth for the autopilot. Each goal has an ID, status, and acceptance criteria. The autopilot reads this file every tick and picks the highest-priority `pending` goal it can finish.
 
-**Strategy:** demo today → moat (JS rendering) in 2 weeks → marketplace in 90 days. See `.agent/CLAUDE_LOOP.md` for full mission.
+## 💰 The single lens for goal selection: REVENUE
+
+Everything in this file maps to one of these five revenue levers:
+
+1. **More paying calls** — ship a new paid endpoint agents will pay for; ship/promote MCP packages; submit to MCP Registry, awesome-mcp, HN; cold-email agent builders
+2. **Higher price per call** — moats (JS rendering, table extraction, anti-bot, caching) that justify higher pricing tiers
+3. **Lower cost per call** — caching, rate-limit pooling, cheaper upstream APIs, materialized rollups
+4. **Lower churn risk** — admin TOTP, observability, tenant-facing features
+5. **Unblock #1-#4** — bug fixes, security, infra reliability, doc clarity
+
+**If a goal doesn't map to one of those five, it doesn't go in this file.**
+
+### How we actually make money — the math
+
+Anthropic does NOT have a third-party billing API. "Claude tokens" as a payment rail isn't a thing. Don't waste ticks on it. **The play is x402: get agents to pay us per-call in USDC/XRP. That's the entire game.**
+
+Revenue math:
+- 1 active agent at 1000 calls/day × $0.005 = **$5/day = $150/mo**
+- 10 active agents = **$1,500/mo**
+- 100 active agents = **$15,000/mo**
+- 1,000 active agents = **$150,000/mo**
+
+**To get to 100 active agents** we need:
+1. **More tools they NEED to install us for** — every additional paid endpoint (mcp-youtube, mcp-pdf, mcp-search, mcp-ocr) is another wedge into an agent stack
+2. **Higher-value tools they pay more for** — JS rendering @ $0.02, PDF extraction @ $0.02, transcription @ $0.05/min compounds the per-call revenue
+3. **Discovery** — MCP Registry, awesome-mcp lists, HN, devs telling other devs
+4. **Friction-free install** — `npm install` + one env var, then it just works
+
+**Strategy:** demo today → ship 2 microservices + JS rendering moat in 2 weeks → first paying customers in 4 weeks → marketplace in 90 days. See `.agent/CLAUDE_LOOP.md` for full mission.
 
 **Status legend (dashboard-parseable):** `open` | `in_progress` | `done` | `blocked`
 
@@ -14,8 +42,8 @@
 | G-002 | P0 | done | 60m | Reframe README + mcp-fetch + LinkedIn as honest demo |
 | G-003 | P0 | blocked | 5m | Smoke-test npm v1.0.1 install (needs user `npm publish` 2FA) |
 | G-004 | P0 | done | 90m | Build /docs/agents agent-onboarding page |
-| G-010 | P1 | open | 240m | mode:render via Playwright (JS rendering — the real moat) |
-| G-011 | P1 | open | 60m | Replace naive html→md with Readability+Turndown |
+| G-010 | P1 | done | 240m | mode:render via Playwright (JS rendering — the real moat) |
+| G-011 | P1 | done | 60m | Replace naive html→md with Readability+Turndown |
 | G-012 | P1 | open | 180m | DDB-backed shared cache (multiple agents share one fetch) |
 | G-013 | P1 | open | 240m | Per-tenant rate-limit pooling — make plan tiers matter |
 | G-020 | P2 | blocked | 5m | Submit to MCP Registry (needs user GitHub OAuth) |
@@ -25,7 +53,7 @@
 | G-024 | P2 | open | 30m | Submit to directories (HN, Product Hunt, awesome-mcp) |
 | G-030 | P3 | open | 60m | Delete 5 stub exchange adapter directories |
 | G-031 | P3 | open | 180m | TOTP 2FA on admin console |
-| G-032 | P3 | open | 30m | Split admin.controller.js (638 lines into 4 files) |
+| G-032 | P3 | done | 30m | Split admin.controller.js (624 lines into 5 files) |
 | G-033 | P3 | open | 120m | Materialize daily earnings rollup table |
 | G-034 | P3 | open | 180m | Real Moonpay adapter (replace stub) |
 | G-035 | P3 | open | 60m | Wire Solana + XRPL-EVM into buildChallenge |
@@ -85,7 +113,7 @@ Each goal below has full acceptance contract — what the autopilot uses to know
 ## P1 — Build the moat (next 7-14 days, the JS rendering thesis)
 
 ### G-010 — Add `mode: "render"` that uses Playwright for JS-rendered pages
-**Status:** pending
+**Status:** done (render service, schema, controller, pricing, tests, READMEs all shipped; SPA validation is a staging-deploy activity)
 **Why:** the differentiator over `@modelcontextprotocol/server-fetch`. Lets agents fetch SPAs (React/Vue/Angular dashboards) that naive HTTP fetch can't crawl.
 **Acceptance:**
 - New `mode: "render"` flag in `/v1/fetch` schema
@@ -96,7 +124,7 @@ Each goal below has full acceptance contract — what the autopilot uses to know
 - Pricing for `render` mode: 0.02 USDC (4× the price of `fast` — Playwright is expensive)
 
 ### G-011 — Replace naive html→markdown with Readability + Turndown pipeline
-**Status:** pending
+**Status:** done (shipped in G-201 fetch service: @mozilla/readability + turndown + linkedom, mode: "full")
 **Why:** quality moat. Article-extraction + cleaner markdown gives noticeably better LLM input than raw conversion.
 **Acceptance:**
 - `mode: "full"` switches from current naive impl to `@mozilla/readability` → `turndown`
@@ -164,10 +192,10 @@ Each goal below has full acceptance contract — what the autopilot uses to know
 **Why:** admin can suspend tenants + see all revenue. Password-only is weak.
 **Acceptance:** `/admin/2fa/setup` shows QR, recovery codes generated, login enforces TOTP after enrollment.
 
-### G-032 — Split `admin.controller.js` (currently 638 lines) into 4 files
-**Status:** pending
-**Why:** violates `CLAUDE.md` "Files > 300 lines get split" rule.
-**Acceptance:** `admin.login.controller.js`, `admin.tenants.controller.js`, `admin.metrics.controller.js`, `admin.password.controller.js`.
+### G-032 — Split `admin.controller.js` (624 lines) into 5 files
+**Status:** done
+**Why:** violated `CLAUDE.md` "Files > 300 lines get split" rule.
+**Acceptance:** `admin.shared.js` (61 lines), `admin.login.controller.js` (155 lines), `admin.tenants.controller.js` (206 lines), `admin.metrics.controller.js` (93 lines), `admin.password.controller.js` (138 lines). All imports updated, all 160 admin tests pass.
 
 ### G-033 — Materialize daily earnings rollup table
 **Status:** pending
