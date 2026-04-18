@@ -16,8 +16,10 @@ describe('fetch.schema', () => {
       expect(FetchMode.safeParse('full')).toMatchObject({ success: true, data: 'full' });
     });
 
-    it('accepts "render"', () => {
-      expect(FetchMode.safeParse('render')).toMatchObject({ success: true, data: 'render' });
+    it('rejects "render" until Lambda Layer for Chromium is wired', () => {
+      // 'render' (Playwright) is gated until @sparticuz/chromium Layer is
+      // attached in CDK. Re-enable when the binary ships in the Lambda.
+      expect(FetchMode.safeParse('render').success).toBe(false);
     });
 
     it('rejects unknown mode', () => {
@@ -55,10 +57,9 @@ describe('fetch.schema', () => {
       expect(res.data.mode).toBe('full');
     });
 
-    it('accepts valid url with render mode', () => {
+    it('rejects render mode until Chromium Layer is wired', () => {
       const res = FetchRequest.safeParse({ url: 'https://spa.example.com', mode: 'render' });
-      expect(res.success).toBe(true);
-      expect(res.data.mode).toBe('render');
+      expect(res.success).toBe(false);
     });
 
     it('accepts http urls', () => {

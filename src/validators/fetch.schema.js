@@ -1,6 +1,9 @@
 import { z } from 'zod';
 
-export const FetchMode = z.enum(['fast', 'full', 'render']);
+// 'render' (Playwright) ships in v1.0.2 — the binary needs a Lambda Layer
+// attached to the fetch function (@sparticuz/chromium). Until that layer is
+// wired in CDK, render is gated to avoid charging agents for a broken endpoint.
+export const FetchMode = z.enum(['fast', 'full']);
 
 export const FetchRequest = z.object({
   url: z.string().url(),

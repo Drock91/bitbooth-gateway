@@ -2,38 +2,38 @@
 
 **Mission:** get one outside agent to pay BitBooth ≥ $0.005 USDC for a real fetch within 12 hours.
 
-**The wedge:** `mode:render` (Playwright JS rendering). Free MCP fetchers can't see SPAs. We can.
+**The wedge:** first working x402 MCP server. Real x402 protocol implementation, real multi-chain settlement (XRPL Mainnet + Base Sepolia), npm-installable in one line. The only paid MCP server that exists today.
+
+> Originally planned to lead with `mode:render` (Playwright JS rendering) as the moat. Caught a bug pre-launch — Chromium binary isn't in the Lambda yet. Render mode is gated until v1.0.2 ships the Chromium Layer (this week). Pivoted launch to lead with the protocol implementation itself.
 
 ---
 
 ## The pitch (one sentence)
 
-> The MCP server that lets your agent fetch JS-rendered pages — Twitter profiles, LinkedIn posts, React dashboards — for $0.02 per page. The free alternatives can't see those pages.
+> The first working x402 MCP server. Your agent fetches a URL, pays $0.005 stablecoin via the Coinbase + Linux Foundation x402 protocol, gets clean markdown back. Sub-2-second settlement on XRPL Mainnet — verified with real money.
 
 ---
 
 ## Step 1 — Show HN post (post 9-11am ET, Tue/Wed/Thu peak)
 
-**Title:** `Show HN: BitBooth – pay-per-fetch MCP server for AI agents (x402 + JS rendering)`
+**Title:** `Show HN: BitBooth – pay-per-fetch MCP server for AI agents using x402`
 
 **Body:**
 
 ```
-Hi HN — I built BitBooth, an MCP server that lets AI agents fetch URLs and pay
-per call via the x402 protocol (Coinbase + Linux Foundation, 2025). One npm
-install, no signup, no API keys. Default is free Base Sepolia testnet so you
-can play without spending real money.
+Hi HN — I built BitBooth, the first working MCP server that lets AI agents
+pay per call via the x402 protocol (Coinbase + Linux Foundation, 2025).
+One npm install, no signup, no API keys. Default is free Base Sepolia
+testnet so you can play without spending real money.
 
-What makes it worth paying for vs. the free `@modelcontextprotocol/server-fetch`:
-JS rendering. We run Playwright headless for `mode:"render"` so agents can fetch
-SPAs, dashboards, gated profiles — pages that naive HTTP fetchers see as blank
-HTML. Tested against Twitter profile pages, LinkedIn public profiles, and a
-React app dashboard.
+The pitch: x402 ships agent payments via standard HTTP 402 + on-chain
+settlement. The protocol is chain-agnostic (uses CAIP-2 to specify the
+network), so I support multiple rails — Base Sepolia (USDC), XRPL Mainnet
+(XRP, USDC, RLUSD). Agent's wallet picks whichever it has balance on.
 
-Pricing:
-  fast (raw HTML→md):   $0.005 USDC per call
-  full (Readability):   $0.005 USDC per call
-  render (Playwright):  $0.020 USDC per call ← the moat
+Pricing per fetch:
+  fast (raw HTML → markdown):              $0.005 USDC
+  full (Readability + Turndown extraction): $0.005 USDC
 
 Real money loop verified end-to-end on XRPL Mainnet (1.3s round-trip):
 https://xrpscan.com/tx/493F6F1ADB9D258898A028F1D0A34684F5DD8B8C9F99BC6FB3432EA1F8AA45C0
@@ -45,14 +45,15 @@ Install (one line):
 Not vaporware — earnings dashboard at https://app.heinrichstech.com/admin/earnings
 shows the real settled txs.
 
-Honest framing: today this is mostly a reference implementation of x402 for
-the MCP world. The JS rendering is the first real moat. Roadmap (open in
-GOALS.md): mcp-youtube (transcripts), mcp-pdf (extraction with tables),
-mcp-search (Brave proxy), mcp-onchain (multi-chain queries).
+Honest framing: today this is a reference implementation of x402 for the
+MCP world — the fetch + markdown logic alone is no better than the free
+@modelcontextprotocol/server-fetch. The protocol implementation itself is
+the value. Real moat shipping this week:
+  - mode:"render" (Playwright JS rendering) — code shipped, awaits Chromium Lambda Layer
+  - mcp-youtube (transcripts), mcp-pdf (extraction with tables) on the roadmap
 
 MIT licensed: https://github.com/Drock91/bitbooth-gateway
-Feedback wanted, especially: where else does pay-per-call beat
-subscription/free?
+Feedback wanted: where else does pay-per-call beat subscription/free?
 
   — Derek
 ```
@@ -69,7 +70,7 @@ subscription/free?
 
 **Tweet 1 (the hook):**
 ```
-Built the first x402 MCP server for AI agents.
+Built the first working x402 MCP server for AI agents.
 
 `npm install @bitbooth/mcp-fetch`
 
@@ -79,14 +80,15 @@ Your agent fetches a URL, pays $0.005 USDC on-chain, gets clean markdown back.
 Demo + thread 👇
 ```
 
-**Tweet 2 (the wedge):**
+**Tweet 2 (the why):**
 ```
-The wedge over free `server-fetch`: JavaScript rendering.
+x402 (Coinbase + Linux Foundation, 2025) is the cleanest agent-payment spec
+I've seen — HTTP 402 + on-chain settlement, chain-agnostic.
 
-Twitter profiles, LinkedIn pages, React dashboards return blank HTML to naive
-fetchers. We run Playwright for `mode:"render"` so agents see what humans see.
+Nobody had a working production MCP implementation of it. Now they do.
 
-$0.02/page. The only paid MCP fetcher that does this.
+Multi-chain settlement out of the box: Base Sepolia (USDC), XRPL Mainnet
+(XRP, USDC, RLUSD). Agent's wallet picks.
 ```
 
 **Tweet 3 (the receipts):**

@@ -219,14 +219,15 @@ describe('postFetch', () => {
       expect(res.statusCode).toBe(200);
     });
 
-    it('charges 4× for render mode ($0.02 USDC)', async () => {
-      mockFetch.mockResolvedValueOnce(fakeFetchResult);
-      await postFetch(makeEvent({ url: 'https://spa.com', mode: 'render' }));
-      expect(mockEnforceX402).toHaveBeenCalledWith(
-        expect.objectContaining({
-          route: expect.objectContaining({ amountWei: '20000' }),
-        }),
-      );
+    it('rejects render mode with ValidationError until Chromium Layer is wired', async () => {
+      // 'render' (Playwright) is gated until @sparticuz/chromium Layer is
+      // attached in CDK. Schema rejects the input → controller throws
+      // ValidationError (the error middleware will turn this into a 400 in
+      // production). Re-enable + restore the 4× pricing assertion when
+      // Chromium ships in the Lambda.
+      await expect(
+        postFetch(makeEvent({ url: 'https://spa.com', mode: 'render' })),
+      ).rejects.toThrow(/Invalid/);
     });
 
     it('charges standard price for fast mode', async () => {

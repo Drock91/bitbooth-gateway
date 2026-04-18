@@ -1,24 +1,23 @@
 # BitBooth
 
-**Pay-per-call APIs for AI agents.** The first MCP server that lets your agent fetch JS-rendered web pages — Twitter profiles, LinkedIn pages, React dashboards — that naive HTTP fetchers can't see.
+**The first working x402 MCP server.** Your agent fetches a URL, pays $0.005 stablecoin per call, gets clean markdown back. No API keys. No signup. No humans.
 
 ```bash
 npm install @bitbooth/mcp-fetch
 ```
 
-Three modes, all paid via the [x402 protocol](https://x402.gitbook.io) (Coinbase + Linux Foundation). No API keys, no signup, no humans in the loop:
+Built on the [x402 protocol](https://x402.gitbook.io) (Coinbase + Linux Foundation). Real money loop verified end-to-end on XRPL Mainnet — see the tx hash below.
 
-| Mode | What it does | Price | vs. free `server-fetch` |
-|---|---|---|---|
-| `fast` | Raw HTML → markdown | $0.005 USDC | same output |
-| `full` | Article extraction (Readability + Turndown) | $0.005 USDC | cleaner markdown |
-| **`render`** | **Playwright JS rendering — sees SPAs the free version can't** | **$0.02 USDC** | **🚀 unique** |
+| Mode | What it does | Price |
+|---|---|---|
+| `fast` | Raw HTML → clean markdown | $0.005 USDC |
+| `full` | Article extraction (Readability + Turndown) → cleaner markdown for LLMs | $0.005 USDC |
 
 > ✅ **Real money loop verified end-to-end on XRPL Mainnet** — last tx [`493F6F1A…`](https://xrpscan.com/tx/493F6F1ADB9D258898A028F1D0A34684F5DD8B8C9F99BC6FB3432EA1F8AA45C0) (1.3s round-trip).
 >
 > 🛡️ **Testnet by default.** Defaults to Base Sepolia so a fresh install spends free testnet USDC, not real money. Opt into mainnet explicitly.
 >
-> 🛣️ **Roadmap:** shared cache layer (multiple agents split the fetch cost), `mcp-youtube` (paid transcripts), `mcp-pdf` (PDF→markdown with table extraction), marketplace for third-party paid endpoints. Track progress in [`GOALS.md`](GOALS.md).
+> 🛣️ **Shipping next (this week):** `mode:"render"` (Playwright-based JS rendering for SPAs the free `@modelcontextprotocol/server-fetch` can't see — code is in the repo, awaiting Chromium Lambda Layer wiring). After that: shared fetch cache, `mcp-youtube`, `mcp-pdf`. Track progress in [`GOALS.md`](GOALS.md).
 
 [![MIT license](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-3,368_passing-brightgreen.svg)](#testing)
