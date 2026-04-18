@@ -9,7 +9,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - G-001a: Earnings dashboard testnet/mainnet toggle — Real money / Testnet / All filter with `?mode=` query param on `/admin/earnings.json`, TESTNET badges on chain rows, mode-aware KPI labels (31 new tests, 3337 total)
-- G-010: Playwright JS rendering via `mode: "render"` on `/v1/fetch` — render service with browser singleton, Readability extraction of rendered content, 4× pricing ($0.02 USDC), Lambda bumped to 2048 MB / 30s timeout, 34 new tests (3368 total)
+- G-010: Playwright JS rendering via `mode: "render"` on `/v1/fetch` — render service with browser singleton, Readability extraction of rendered content, 4× pricing ($0.02 USDC), Lambda bumped to 2048 MB / 30s timeout, README + mcp-fetch README updated with render mode docs, 34 new tests (3,368 total)
 
 ### Changed
 

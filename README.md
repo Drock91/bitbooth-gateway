@@ -2,14 +2,14 @@
 
 **The first end-to-end working x402 reference implementation, shipped as an MCP server.** This repo is a demo of how AI agents pay for APIs per-request in stablecoin — no API keys, no signup, no humans in the loop.
 
-> ⚠️ **What this is today:** a reference implementation. The first paid endpoint (`/v1/fetch`, 0.005 USDC for URL → markdown) is functionally equivalent to the free `@modelcontextprotocol/server-fetch`. Install it to **learn the x402 protocol**, not to save time on web fetches.
+> **What this does today:** the `/v1/fetch` endpoint has three modes — `fast` (raw HTML → markdown), `full` (article extraction via Readability + Turndown), and `render` (**Playwright JS rendering** for SPAs that naive HTTP can't crawl). The `render` mode is the first real moat over the free `@modelcontextprotocol/server-fetch`.
 >
-> 🛣️ **What's next (2-week roadmap):** real moat over free alternatives. JS rendering (Playwright), better markdown extraction (Readability + Turndown), shared cache layer, then a marketplace where third-party API publishers can list paid endpoints.
+> 🛣️ **What's next:** shared cache layer (multiple agents split the cost), marketplace where third-party API publishers list paid endpoints, YouTube transcript / PDF extraction MCP packages.
 
 Built on the [x402 protocol](https://x402.gitbook.io) (HTTP 402 Payment Required) from the x402 Foundation (Coinbase + Linux Foundation).
 
 [![MIT license](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-3,306_passing-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-3,368_passing-brightgreen.svg)](#testing)
 [![Node 20](https://img.shields.io/badge/node-20-blue.svg)](https://nodejs.org)
 
 ---
@@ -22,7 +22,7 @@ The flagship agent-native endpoint. **No API key. No signup. Just pay.**
 # 1. Hit the endpoint — get a 402 with a payment challenge
 curl -X POST https://app.heinrichstech.com/v1/fetch \
   -H "Content-Type: application/json" \
-  -d '{"url":"https://example.com","mode":"fast"}'
+  -d '{"url":"https://example.com","mode":"render"}'
 
 # HTTP/1.1 402 Payment Required
 # {
@@ -32,12 +32,12 @@ curl -X POST https://app.heinrichstech.com/v1/fetch \
 #       "network": "eip155:84532",
 #       "payTo": "0x6Eb83C70a71c81BE7Fc13F0d711A28736a9E37Fc",
 #       "asset": "USDC@0x036CbD53842c5426634e7929541eC2318f3dCF7e",
-#       "amount": "5000"
+#       "amount": "20000"
 #     }]
 #   }
 # }
 
-# 2. Agent signs + sends 0.005 USDC on Base Sepolia to payTo
+# 2. Agent signs + sends 0.02 USDC on Base Sepolia to payTo
 # 3. Agent retries with X-Payment header containing the tx hash
 # 4. Gets 200 OK + clean markdown back
 ```
@@ -121,7 +121,7 @@ Every 402 challenge returns an `accepts[]` array of currently-enabled chains. Th
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| `POST` | `/v1/fetch` | **x402 only** | URL → clean markdown. No API key. Pay-per-call. |
+| `POST` | `/v1/fetch` | **x402 only** | URL → clean markdown. Modes: `fast` / `full` / `render` (Playwright). No API key. Pay-per-call. |
 | `POST` | `/v1/resource` | API key + x402 | Paywalled resource (tenant-configured pricing) |
 | `POST` | `/v1/resource/premium` | API key + x402 | Premium resource (2× price) |
 | `POST` | `/v1/resource/bulk` | API key + x402 | Bulk operations (amount × item count) |
@@ -157,7 +157,7 @@ bitbooth-gateway/
 │   ├── mcp-fetch/       # @bitbooth/mcp-fetch — MCP server for fetch tool
 │   ├── langchain-bitbooth/  # LangChain tool wrapper
 │   └── bitbooth-py/     # Python client
-├── tests/               # 3,306 unit tests + integration tests
+├── tests/               # 3,368 unit tests + integration tests
 ├── scripts/             # Smoke tests, load tests, ops tools
 └── docs/                # Deploy guide, integration guide, ADRs
 ```
@@ -169,7 +169,7 @@ bitbooth-gateway/
 - **Chains:** XRPL Mainnet + Base Sepolia (live), XRPL EVM + Solana (adapter code in repo, awaiting activation)
 - **Protocol:** x402 V2 (HTTP 402 Payment Required)
 - **Validation:** Zod at every boundary
-- **Testing:** Vitest — 3,306 tests, all passing
+- **Testing:** Vitest — 3,368 tests, all passing
 - **Infra:** AWS CDK (stage-aware: dev/staging/prod)
 - **Deploy:** esbuild bundles per-Lambda, `cdk deploy`
 
@@ -177,7 +177,7 @@ bitbooth-gateway/
 
 - **x402 V2 protocol** — challenge/response with nonce-based replay protection, on-chain settlement. **Verified end-to-end on live staging** (XRPL mainnet XRP (real money) + Base Sepolia USDC (testnet, dev-only), 1-8s round-trip).
 - **Multi-chain routing** — single API, multiple rails advertised in each 402 challenge. Agent picks based on wallet balance.
-- **Agent-native endpoint** (`/v1/fetch`) — zero signup, zero API key, pure pay-per-call. Returns clean markdown.
+- **Agent-native endpoint** (`/v1/fetch`) — zero signup, zero API key, pure pay-per-call. Three modes: `fast` (0.005 USDC, raw HTML → markdown), `full` (0.005 USDC, article extraction via Readability + Turndown), `render` (0.02 USDC, **Playwright JS rendering** for SPAs/dashboards that naive HTTP can't crawl).
 - **Multi-tenant SaaS** — self-service signup, API keys, per-route pricing, session-based client portal.
 - **Fiat onramping** — *not implemented yet.* The repo contains scaffold adapters for Moonpay / Coinbase / Kraken / Binance / Uphold, but they're stubs that don't make real HTTP calls. `/v1/quote` is intentionally unrouted until a real adapter ships. **Today BitBooth is crypto-in only**: agents pay from a wallet they already control.
 - **Fraud prevention** — velocity rules, nonce tracking, amount bounds, configurable thresholds.
@@ -193,7 +193,7 @@ bitbooth-gateway/
 ```bash
 npm install           # install deps
 npm run lint          # eslint --max-warnings=0
-npm test              # 3,306 tests, ~20s
+npm test              # 3,368 tests, ~20s
 npm run build         # esbuild bundles to dist/
 npm run cdk:synth     # validates CDK stack (STAGE=dev)
 ```
@@ -213,7 +213,7 @@ Full walkthrough in [`docs/DEPLOY.md`](docs/DEPLOY.md).
 ## Testing
 
 ```bash
-npm test                          # run all 3,306 unit tests
+npm test                          # run all 3,368 unit tests
 npm run test:integration          # requires LocalStack + testnet RPC
 npm run test:coverage             # coverage report (target ≥80% on services/ and middleware/)
 ```
@@ -245,7 +245,7 @@ See [`CLAUDE.md`](CLAUDE.md#security) for the full security posture.
 This is a working open-source x402 reference gateway. PRs welcome. Before opening one:
 
 1. `npm run lint` must pass with zero warnings
-2. `npm test` must pass all 3,306 tests
+2. `npm test` must pass all 3,368 tests
 3. `npm audit --audit-level=high` must return 0
 4. Add Zod validators for any new request shape
 5. No TypeScript — this is pure JavaScript + JSDoc typedefs (see [`CLAUDE.md`](CLAUDE.md#coding-style))
