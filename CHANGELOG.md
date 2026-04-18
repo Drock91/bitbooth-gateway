@@ -10,6 +10,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - G-001a: Earnings dashboard testnet/mainnet toggle — Real money / Testnet / All filter with `?mode=` query param on `/admin/earnings.json`, TESTNET badges on chain rows, mode-aware KPI labels (31 new tests, 3337 total)
 
+### Changed
+
+- G-011: Marked done — Readability + Turndown pipeline already shipped in G-201 (`mode: "full"` in `/v1/fetch`)
+- G-032: Split monolithic `admin.controller.js` (624 lines) into 5 focused files: `admin.shared.js`, `admin.login.controller.js`, `admin.tenants.controller.js`, `admin.metrics.controller.js`, `admin.password.controller.js`. All 160 admin tests pass, all imports updated
+
 ## [1.0.0] - 2026-04-17
 
 First public release. Repository moved from `Drock91/BitBooth` (private) to `Drock91/bitbooth-gateway` (public, MIT).

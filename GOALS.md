@@ -43,7 +43,7 @@ Revenue math:
 | G-003 | P0 | blocked | 5m | Smoke-test npm v1.0.1 install (needs user `npm publish` 2FA) |
 | G-004 | P0 | done | 90m | Build /docs/agents agent-onboarding page |
 | G-010 | P1 | open | 240m | mode:render via Playwright (JS rendering — the real moat) |
-| G-011 | P1 | open | 60m | Replace naive html→md with Readability+Turndown |
+| G-011 | P1 | done | 60m | Replace naive html→md with Readability+Turndown |
 | G-012 | P1 | open | 180m | DDB-backed shared cache (multiple agents share one fetch) |
 | G-013 | P1 | open | 240m | Per-tenant rate-limit pooling — make plan tiers matter |
 | G-020 | P2 | blocked | 5m | Submit to MCP Registry (needs user GitHub OAuth) |
@@ -53,7 +53,7 @@ Revenue math:
 | G-024 | P2 | open | 30m | Submit to directories (HN, Product Hunt, awesome-mcp) |
 | G-030 | P3 | open | 60m | Delete 5 stub exchange adapter directories |
 | G-031 | P3 | open | 180m | TOTP 2FA on admin console |
-| G-032 | P3 | open | 30m | Split admin.controller.js (638 lines into 4 files) |
+| G-032 | P3 | done | 30m | Split admin.controller.js (624 lines into 5 files) |
 | G-033 | P3 | open | 120m | Materialize daily earnings rollup table |
 | G-034 | P3 | open | 180m | Real Moonpay adapter (replace stub) |
 | G-035 | P3 | open | 60m | Wire Solana + XRPL-EVM into buildChallenge |
@@ -124,7 +124,7 @@ Each goal below has full acceptance contract — what the autopilot uses to know
 - Pricing for `render` mode: 0.02 USDC (4× the price of `fast` — Playwright is expensive)
 
 ### G-011 — Replace naive html→markdown with Readability + Turndown pipeline
-**Status:** pending
+**Status:** done (shipped in G-201 fetch service: @mozilla/readability + turndown + linkedom, mode: "full")
 **Why:** quality moat. Article-extraction + cleaner markdown gives noticeably better LLM input than raw conversion.
 **Acceptance:**
 - `mode: "full"` switches from current naive impl to `@mozilla/readability` → `turndown`
@@ -192,10 +192,10 @@ Each goal below has full acceptance contract — what the autopilot uses to know
 **Why:** admin can suspend tenants + see all revenue. Password-only is weak.
 **Acceptance:** `/admin/2fa/setup` shows QR, recovery codes generated, login enforces TOTP after enrollment.
 
-### G-032 — Split `admin.controller.js` (currently 638 lines) into 4 files
-**Status:** pending
-**Why:** violates `CLAUDE.md` "Files > 300 lines get split" rule.
-**Acceptance:** `admin.login.controller.js`, `admin.tenants.controller.js`, `admin.metrics.controller.js`, `admin.password.controller.js`.
+### G-032 — Split `admin.controller.js` (624 lines) into 5 files
+**Status:** done
+**Why:** violated `CLAUDE.md` "Files > 300 lines get split" rule.
+**Acceptance:** `admin.shared.js` (61 lines), `admin.login.controller.js` (155 lines), `admin.tenants.controller.js` (206 lines), `admin.metrics.controller.js` (93 lines), `admin.password.controller.js` (138 lines). All imports updated, all 160 admin tests pass.
 
 ### G-033 — Materialize daily earnings rollup table
 **Status:** pending

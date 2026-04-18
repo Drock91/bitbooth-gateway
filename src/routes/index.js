@@ -4,7 +4,7 @@ import {
   getPayments,
 } from '../controllers/payments.controller.js';
 import { getHealth, getHealthReady } from '../controllers/health.controller.js';
-import { listTenants } from '../controllers/admin.controller.js';
+import { listTenants } from '../controllers/admin.tenants.controller.js';
 import { getEarningsHtml, getEarningsJson } from '../controllers/earnings.controller.js';
 import { postDemoRelay } from '../controllers/demo-relay.controller.js';
 

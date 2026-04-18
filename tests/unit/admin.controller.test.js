@@ -55,16 +55,14 @@ vi.mock('../../src/repositories/tenants.repo.js', () => ({
   tenantsRepo: { updateStatus: mockUpdateStatus },
 }));
 
+import { getAdmin, postAdminLogin, getAdminLogout } from '../../src/controllers/admin.login.controller.js';
 import {
-  getAdmin,
-  postAdminLogin,
-  getAdminLogout,
   listTenants,
   listTenantsUI,
   suspendTenant,
   reactivateTenant,
-  getAdminMetricsUI,
-} from '../../src/controllers/admin.controller.js';
+} from '../../src/controllers/admin.tenants.controller.js';
+import { getAdminMetricsUI } from '../../src/controllers/admin.metrics.controller.js';
 import { UnauthorizedError, TooManyRequestsError } from '../../src/lib/errors.js';
 
 const SESSION = {

@@ -34,7 +34,7 @@ describe('routes/index.js', () => {
       getHealth,
       getHealthReady,
     }));
-    vi.doMock('../../src/controllers/admin.controller.js', () => ({
+    vi.doMock('../../src/controllers/admin.tenants.controller.js', () => ({
       listTenants,
     }));
     vi.doMock('../../src/controllers/earnings.controller.js', () => ({
