@@ -1,12 +1,24 @@
 # BitBooth
 
-**The first end-to-end working x402 reference implementation, shipped as an MCP server.** This repo is a demo of how AI agents pay for APIs per-request in stablecoin — no API keys, no signup, no humans in the loop.
+**Pay-per-call APIs for AI agents.** The first MCP server that lets your agent fetch JS-rendered web pages — Twitter profiles, LinkedIn pages, React dashboards — that naive HTTP fetchers can't see.
 
-> **What this does today:** the `/v1/fetch` endpoint has three modes — `fast` (raw HTML → markdown), `full` (article extraction via Readability + Turndown), and `render` (**Playwright JS rendering** for SPAs that naive HTTP can't crawl). The `render` mode is the first real moat over the free `@modelcontextprotocol/server-fetch`.
+```bash
+npm install @bitbooth/mcp-fetch
+```
+
+Three modes, all paid via the [x402 protocol](https://x402.gitbook.io) (Coinbase + Linux Foundation). No API keys, no signup, no humans in the loop:
+
+| Mode | What it does | Price | vs. free `server-fetch` |
+|---|---|---|---|
+| `fast` | Raw HTML → markdown | $0.005 USDC | same output |
+| `full` | Article extraction (Readability + Turndown) | $0.005 USDC | cleaner markdown |
+| **`render`** | **Playwright JS rendering — sees SPAs the free version can't** | **$0.02 USDC** | **🚀 unique** |
+
+> ✅ **Real money loop verified end-to-end on XRPL Mainnet** — last tx [`493F6F1A…`](https://xrpscan.com/tx/493F6F1ADB9D258898A028F1D0A34684F5DD8B8C9F99BC6FB3432EA1F8AA45C0) (1.3s round-trip).
 >
-> 🛣️ **What's next:** shared cache layer (multiple agents split the cost), marketplace where third-party API publishers list paid endpoints, YouTube transcript / PDF extraction MCP packages.
-
-Built on the [x402 protocol](https://x402.gitbook.io) (HTTP 402 Payment Required) from the x402 Foundation (Coinbase + Linux Foundation).
+> 🛡️ **Testnet by default.** Defaults to Base Sepolia so a fresh install spends free testnet USDC, not real money. Opt into mainnet explicitly.
+>
+> 🛣️ **Roadmap:** shared cache layer (multiple agents split the fetch cost), `mcp-youtube` (paid transcripts), `mcp-pdf` (PDF→markdown with table extraction), marketplace for third-party paid endpoints. Track progress in [`GOALS.md`](GOALS.md).
 
 [![MIT license](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-3,368_passing-brightgreen.svg)](#testing)

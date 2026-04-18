@@ -15,13 +15,8 @@ describe('autopilot workflow — triggers', () => {
     expect(wf.name).toBe('autopilot');
   });
 
-  it('triggers on schedule and workflow_dispatch', () => {
-    expect(Object.keys(wf.on).sort()).toEqual(['schedule', 'workflow_dispatch']);
-  });
-
-  it('schedule runs every 4 hours via cron', () => {
-    expect(wf.on.schedule).toHaveLength(1);
-    expect(wf.on.schedule[0].cron).toBe('0 */4 * * *');
+  it('triggers on workflow_dispatch only (schedule disabled — local Docker autopilot)', () => {
+    expect(Object.keys(wf.on)).toEqual(['workflow_dispatch']);
   });
 
   it('workflow_dispatch exposes an optional goalId input', () => {
