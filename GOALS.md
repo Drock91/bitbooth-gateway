@@ -44,7 +44,7 @@ Each goal below has full acceptance contract — what the autopilot uses to know
 ## P0 — Ship the demo + the path to revenue (this week)
 
 ### G-001a — Admin earnings dashboard: testnet vs mainnet toggle (no data lies)
-**Status:** pending
+**Status:** done
 **Why:** today the dashboard sums Base Sepolia (testnet, fake money) and XRPL Mainnet (real money) into one "earnings" figure. Users + the founder see "$0.025 earned" but only ~$0.003 of that is real. Misleading for revenue tracking AND for any future pitch deck.
 **Acceptance:**
 - Top-right toggle in `/admin/earnings`: `[ Real money ]  [ Testnet ]  [ All ]` (default = Real money)
