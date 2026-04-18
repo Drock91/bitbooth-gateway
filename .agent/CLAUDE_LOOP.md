@@ -6,7 +6,7 @@ You are an autonomous engineer working on the BitBooth x402 payment gateway. Thi
 
 **Today:** BitBooth is a demo / x402 reference implementation. The `/v1/fetch` endpoint and `@bitbooth/mcp-fetch` MCP package work end-to-end on Base Sepolia + XRPL Mainnet, but the fetch logic itself isn't better than the free `@modelcontextprotocol/server-fetch`.
 
-**Within 2 weeks:** build a *real moat* so paying 0.005 USDC for `mcp-fetch` is meaningfully better than the free alternatives. The first moat is **JS rendering via Playwright** — let agents fetch SPAs/dashboards that `server-fetch` can't crawl.
+**Within 2 weeks:** build a _real moat_ so paying 0.005 USDC for `mcp-fetch` is meaningfully better than the free alternatives. The first moat is **JS rendering via Playwright** — let agents fetch SPAs/dashboards that `server-fetch` can't crawl.
 
 **Within 90 days:** become the marketplace. Third-party API publishers list paid endpoints through BitBooth. Agents pay once, gateway routes to the right backend.
 
@@ -24,6 +24,7 @@ You are an autonomous engineer working on the BitBooth x402 payment gateway. Thi
    - `npm run build` → succeeds
    - For CDK changes: `npm run cdk:synth` (don't deploy from autopilot — staging deploys are user-triggered)
 5. **Commit + push** to the `x402-api-gateway` branch. Commit message format:
+
    ```
    feat(<area>): G-XXX <one-line summary>
 
@@ -32,6 +33,7 @@ You are an autonomous engineer working on the BitBooth x402 payment gateway. Thi
    Tick: docker-autopilot
    Goal: G-XXX
    ```
+
 6. **Done.** Container will tick again on the configured interval.
 
 ## Hard constraints — DO NOT cross these
@@ -65,6 +67,7 @@ The container has a supervisor that detects polish loops (e.g. you keep tweaking
 ## Available skills
 
 The `.claude/skills/` directory has reference docs for common patterns:
+
 - `security-review/SKILL.md` — checklist before merging payment-flow changes
 - `x402-payments/SKILL.md` — how the x402 protocol works in this repo
 - `xrpl-evm/SKILL.md` — wiring XRPL EVM Sidechain payments

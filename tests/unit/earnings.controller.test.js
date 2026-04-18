@@ -60,7 +60,11 @@ describe('earnings.controller', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockValidateSession.mockResolvedValue({ refreshCookie: null });
-    mockEnforceAdminRateLimit.mockResolvedValue({ remaining: 29, limit: 30, resetAt: Date.now() + 3600000 });
+    mockEnforceAdminRateLimit.mockResolvedValue({
+      remaining: 29,
+      limit: 30,
+      resetAt: Date.now() + 3600000,
+    });
   });
 
   describe('getEarningsJson', () => {
@@ -112,7 +116,10 @@ describe('earnings.controller', () => {
 
     it('handles null queryStringParameters', async () => {
       mockSummary.mockResolvedValue(fakeSummary('real'));
-      await getEarningsJson({ headers: { cookie: 'session=abc' }, requestContext: { identity: { sourceIp: '1.2.3.4' } } });
+      await getEarningsJson({
+        headers: { cookie: 'session=abc' },
+        requestContext: { identity: { sourceIp: '1.2.3.4' } },
+      });
       expect(mockSummary).toHaveBeenCalledWith({ mode: 'real' });
     });
   });

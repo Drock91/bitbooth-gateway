@@ -1,9 +1,11 @@
 name: fetch-nightly
 
+# DISABLED — needs AGENT_KEY + funded wallet repo secrets that aren't set.
+# Re-enable by un-commenting the schedule trigger after configuring secrets.
 on:
-  schedule:
-    - cron: '0 4 * * *'
   workflow_dispatch:
+  # schedule:
+  #   - cron: '0 4 * * *'
 
 permissions:
   id-token: write

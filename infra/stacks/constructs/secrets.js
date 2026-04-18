@@ -24,6 +24,5 @@ export class Secrets extends Construct {
       secretName: `x402/${stage}/admin-api-key-hash`,
       description: 'SHA-256 hash of the admin API key for /admin endpoints',
     });
-
   }
 }

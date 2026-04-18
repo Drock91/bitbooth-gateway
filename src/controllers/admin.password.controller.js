@@ -2,10 +2,7 @@ import { adminService } from '../services/admin.service.js';
 import { AdminChangePasswordBody } from '../validators/admin.schema.js';
 import { escapeHtml } from '../lib/templates.js';
 import { stagePrefix } from '../lib/stage-prefix.js';
-import {
-  enforceAdminRateLimit,
-  extractClientIp,
-} from '../middleware/rate-limit.middleware.js';
+import { enforceAdminRateLimit, extractClientIp } from '../middleware/rate-limit.middleware.js';
 import { THEME_CSS, BRAND_BAR_CSS, brandBar, htmlResponse } from './admin.shared.js';
 
 function renderChangePasswordPage({ error, success, event } = {}) {
@@ -130,9 +127,18 @@ export async function postAdminChangePassword(event) {
   try {
     await adminService.changeAdminKey(parsed.data.currentPassword, parsed.data.newPassword);
   } catch (e) {
-    return htmlResponse(401, renderChangePasswordPage({ error: e?.message || 'Update failed', event }));
+    return htmlResponse(
+      401,
+      renderChangePasswordPage({ error: e?.message || 'Update failed', event }),
+    );
   }
 
   await adminService.auditLog('changePassword', { ip: clientIp });
-  return htmlResponse(200, renderChangePasswordPage({ success: 'Password updated successfully. Use your new password next time you sign in.', event }));
+  return htmlResponse(
+    200,
+    renderChangePasswordPage({
+      success: 'Password updated successfully. Use your new password next time you sign in.',
+      event,
+    }),
+  );
 }

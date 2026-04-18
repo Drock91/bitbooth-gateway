@@ -96,18 +96,18 @@ One round-trip. **Verified end-to-end at 1.3s on XRPL Mainnet and Base Sepolia t
 
 ## Supported chains
 
-| Network | CAIP-2 | Asset | Mainnet? | Status |
-|---|---|---|---|---|
-| **XRPL Mainnet** | `xrpl:0` | **XRP** | 💰 **REAL MONEY** | ✅ End-to-end verified — last real tx [`493F6F1A…`](https://xrpscan.com/tx/493F6F1ADB9D258898A028F1D0A34684F5DD8B8C9F99BC6FB3432EA1F8AA45C0) |
-| XRPL Mainnet | `xrpl:0` | USDC (Bitstamp issuer) | 💰 Real money | ✅ Verifier wired, awaiting first end-to-end real-money test |
-| XRPL Mainnet | `xrpl:0` | RLUSD (Ripple issuer) | 💰 Real money | ⚙️ Verifier wired, awaiting trust line setup |
-| Base Sepolia | `eip155:84532` | USDC | 🧪 **TESTNET (free)** | ✅ End-to-end verified — for **development only**, no real value |
-| Base Mainnet | `eip155:8453` | USDC | 💰 Real money | ⚙️ Adapter ready, **not enabled** (mainnet agent wallet not funded yet) |
-| XRPL Testnet | `xrpl:1` | XRP | 🧪 Testnet (free) | ⚙️ Adapter ready, not enabled |
-| Solana Mainnet | `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp` | USDC-SPL | 💰 Real money | ⚙️ Adapter code ready, not wired into challenge builder |
-| XRPL EVM Sidechain | `eip155:1440002` | USDC | 💰 Real money | ⚙️ Adapter code ready, not wired into challenge builder |
-| Stellar | — | — | — | 🛣 Not yet implemented |
-| Bitcoin Lightning (L402) | — | sats | 💰 Real money | 🛣 Roadmap |
+| Network                  | CAIP-2                                    | Asset                  | Mainnet?              | Status                                                                                                                                       |
+| ------------------------ | ----------------------------------------- | ---------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| **XRPL Mainnet**         | `xrpl:0`                                  | **XRP**                | 💰 **REAL MONEY**     | ✅ End-to-end verified — last real tx [`493F6F1A…`](https://xrpscan.com/tx/493F6F1ADB9D258898A028F1D0A34684F5DD8B8C9F99BC6FB3432EA1F8AA45C0) |
+| XRPL Mainnet             | `xrpl:0`                                  | USDC (Bitstamp issuer) | 💰 Real money         | ✅ Verifier wired, awaiting first end-to-end real-money test                                                                                 |
+| XRPL Mainnet             | `xrpl:0`                                  | RLUSD (Ripple issuer)  | 💰 Real money         | ⚙️ Verifier wired, awaiting trust line setup                                                                                                 |
+| Base Sepolia             | `eip155:84532`                            | USDC                   | 🧪 **TESTNET (free)** | ✅ End-to-end verified — for **development only**, no real value                                                                             |
+| Base Mainnet             | `eip155:8453`                             | USDC                   | 💰 Real money         | ⚙️ Adapter ready, **not enabled** (mainnet agent wallet not funded yet)                                                                      |
+| XRPL Testnet             | `xrpl:1`                                  | XRP                    | 🧪 Testnet (free)     | ⚙️ Adapter ready, not enabled                                                                                                                |
+| Solana Mainnet           | `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp` | USDC-SPL               | 💰 Real money         | ⚙️ Adapter code ready, not wired into challenge builder                                                                                      |
+| XRPL EVM Sidechain       | `eip155:1440002`                          | USDC                   | 💰 Real money         | ⚙️ Adapter code ready, not wired into challenge builder                                                                                      |
+| Stellar                  | —                                         | —                      | —                     | 🛣 Not yet implemented                                                                                                                       |
+| Bitcoin Lightning (L402) | —                                         | sats                   | 💰 Real money         | 🛣 Roadmap                                                                                                                                   |
 
 **Today's only real-money production rail is XRPL Mainnet.** Base Sepolia is testnet — agents can pay there using free Circle faucet USDC, useful for development but it isn't real revenue. To enable Base Mainnet (real USDC), fund the configured agent wallet with real USDC on Base, set `XRPL_NETWORK` / `chainId` env vars per `docs/DEPLOY.md`, and re-deploy.
 
@@ -119,15 +119,15 @@ Every 402 challenge returns an `accepts[]` array of currently-enabled chains. Th
 
 ## API
 
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| `POST` | `/v1/fetch` | **x402 only** | URL → clean markdown. Modes: `fast` / `full` / `render` (Playwright). No API key. Pay-per-call. |
-| `POST` | `/v1/resource` | API key + x402 | Paywalled resource (tenant-configured pricing) |
-| `POST` | `/v1/resource/premium` | API key + x402 | Premium resource (2× price) |
-| `POST` | `/v1/resource/bulk` | API key + x402 | Bulk operations (amount × item count) |
-| `GET`  | `/v1/payments` | API key | Payment history (cursor pagination) |
-| `GET`  | `/v1/health` | — | Health check |
-| `GET`  | `/v1/health/ready` | — | Readiness (DDB + RPC + secrets) |
+| Method | Path                   | Auth           | Description                                                                                     |
+| ------ | ---------------------- | -------------- | ----------------------------------------------------------------------------------------------- |
+| `POST` | `/v1/fetch`            | **x402 only**  | URL → clean markdown. Modes: `fast` / `full` / `render` (Playwright). No API key. Pay-per-call. |
+| `POST` | `/v1/resource`         | API key + x402 | Paywalled resource (tenant-configured pricing)                                                  |
+| `POST` | `/v1/resource/premium` | API key + x402 | Premium resource (2× price)                                                                     |
+| `POST` | `/v1/resource/bulk`    | API key + x402 | Bulk operations (amount × item count)                                                           |
+| `GET`  | `/v1/payments`         | API key        | Payment history (cursor pagination)                                                             |
+| `GET`  | `/v1/health`           | —              | Health check                                                                                    |
+| `GET`  | `/v1/health/ready`     | —              | Readiness (DDB + RPC + secrets)                                                                 |
 
 Full spec in [`openapi.yaml`](openapi.yaml).
 
@@ -177,7 +177,7 @@ bitbooth-gateway/
 - **Multi-chain routing** — single API, multiple rails advertised in each 402 challenge. Agent picks based on wallet balance.
 - **Agent-native endpoint** (`/v1/fetch`) — zero signup, zero API key, pure pay-per-call. Three modes: `fast` (0.005 USDC, raw HTML → markdown), `full` (0.005 USDC, article extraction via Readability + Turndown), `render` (0.02 USDC, **Playwright JS rendering** for SPAs/dashboards that naive HTTP can't crawl).
 - **Multi-tenant SaaS** — self-service signup, API keys, per-route pricing, session-based client portal.
-- **Fiat onramping** — *not implemented yet.* `/v1/quote` is unrouted until a real exchange adapter ships (e.g. Moonpay). **Today BitBooth is crypto-in only**: agents pay from a wallet they already control.
+- **Fiat onramping** — _not implemented yet._ `/v1/quote` is unrouted until a real exchange adapter ships (e.g. Moonpay). **Today BitBooth is crypto-in only**: agents pay from a wallet they already control.
 - **Fraud prevention** — velocity rules, nonce tracking, amount bounds, configurable thresholds.
 - **Rate limiting** — token bucket, 4 tiers (Free/Starter/Growth/Scale), per-IP for anonymous callers.
 - **Idempotency** — 24h result caching via DynamoDB TTL.

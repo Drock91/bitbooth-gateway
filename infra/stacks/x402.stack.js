@@ -82,15 +82,11 @@ export class X402Stack extends Stack {
       // the x402 middleware will include XRPL in every 402 accepts[] array.
       // Defaults to mainnet (xrpl:0) unless XRPL_NETWORK overrides.
       ...(process.env.XRPL_PAY_TO ? { XRPL_PAY_TO: process.env.XRPL_PAY_TO } : {}),
-      ...(process.env.XRPL_USDC_ISSUER
-        ? { XRPL_USDC_ISSUER: process.env.XRPL_USDC_ISSUER }
-        : {}),
+      ...(process.env.XRPL_USDC_ISSUER ? { XRPL_USDC_ISSUER: process.env.XRPL_USDC_ISSUER } : {}),
       ...(process.env.XRPL_RLUSD_ISSUER
         ? { XRPL_RLUSD_ISSUER: process.env.XRPL_RLUSD_ISSUER }
         : {}),
-      ...(process.env.XRPL_NETWORK
-        ? { XRPL_NETWORK: process.env.XRPL_NETWORK }
-        : {}),
+      ...(process.env.XRPL_NETWORK ? { XRPL_NETWORK: process.env.XRPL_NETWORK } : {}),
       // When XRPL is set to mainnet (xrpl:0), override the WSS endpoint
       // so the adapter looks up tx hashes on mainnet, not testnet.
       ...(process.env.XRPL_WS_URL ? { XRPL_WS_URL: process.env.XRPL_WS_URL } : {}),

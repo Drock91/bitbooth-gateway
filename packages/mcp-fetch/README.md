@@ -69,33 +69,33 @@ fetch(url: "https://example.com", mode: "render")
 
 **Modes:**
 
-| Mode     | Price       | Description                                    | Best for                      |
-| -------- | ----------- | ---------------------------------------------- | ----------------------------- |
-| `fast`   | 0.005 USDC  | Raw HTML converted to markdown                 | Quick lookups, static pages   |
-| `full`   | 0.005 USDC  | Article extraction (Readability) then markdown | Blog posts, docs, news        |
-| `render` | 0.02 USDC   | **Playwright JS rendering** then markdown      | SPAs, dashboards, dynamic JS  |
+| Mode     | Price      | Description                                    | Best for                     |
+| -------- | ---------- | ---------------------------------------------- | ---------------------------- |
+| `fast`   | 0.005 USDC | Raw HTML converted to markdown                 | Quick lookups, static pages  |
+| `full`   | 0.005 USDC | Article extraction (Readability) then markdown | Blog posts, docs, news       |
+| `render` | 0.02 USDC  | **Playwright JS rendering** then markdown      | SPAs, dashboards, dynamic JS |
 
 Returns markdown with title, body, and metadata (URL, timestamp, content length, truncation status).
 
 ## Pricing
 
-| Item          | Cost                                              |
-| ------------- | ------------------------------------------------- |
-| `fast`/`full` | **0.005 USDC** per fetch                          |
-| `render`      | **0.02 USDC** per fetch (Playwright is expensive) |
-| Gas           | ~$0.0001 per tx on Base (mainnet) / free (testnet) |
+| Item          | Cost                                                 |
+| ------------- | ---------------------------------------------------- |
+| `fast`/`full` | **0.005 USDC** per fetch                             |
+| `render`      | **0.02 USDC** per fetch (Playwright is expensive)    |
+| Gas           | ~$0.0001 per tx on Base (mainnet) / free (testnet)   |
 | Default chain | Base Sepolia (testnet). Explicit opt-in for mainnet. |
 
 ## Configuration
 
-| Env var                  | Description                                              | Default |
-| ------------------------ | -------------------------------------------------------- | ------- |
-| `BITBOOTH_AGENT_KEY`     | Agent wallet private key **(required, 0x-prefixed hex)** | — |
-| `BITBOOTH_CHAIN_ID`      | `84532` = Base Sepolia (default, free testnet). `8453` = Base mainnet (real USDC — opt-in). | `84532` |
-| `BITBOOTH_API_URL`       | BitBooth gateway URL                                     | staging endpoint (Base Sepolia) |
-| `BITBOOTH_RPC_URL`       | EVM RPC endpoint                                         | `https://base-sepolia-rpc.publicnode.com` |
-| `BITBOOTH_CONFIRMATIONS` | Tx confirmations to wait before retry                    | `1` |
-| `BITBOOTH_API_KEY`       | Optional tenant API key (for higher rate limits)         | — |
+| Env var                  | Description                                                                                 | Default                                   |
+| ------------------------ | ------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `BITBOOTH_AGENT_KEY`     | Agent wallet private key **(required, 0x-prefixed hex)**                                    | —                                         |
+| `BITBOOTH_CHAIN_ID`      | `84532` = Base Sepolia (default, free testnet). `8453` = Base mainnet (real USDC — opt-in). | `84532`                                   |
+| `BITBOOTH_API_URL`       | BitBooth gateway URL                                                                        | staging endpoint (Base Sepolia)           |
+| `BITBOOTH_RPC_URL`       | EVM RPC endpoint                                                                            | `https://base-sepolia-rpc.publicnode.com` |
+| `BITBOOTH_CONFIRMATIONS` | Tx confirmations to wait before retry                                                       | `1`                                       |
+| `BITBOOTH_API_KEY`       | Optional tenant API key (for higher rate limits)                                            | —                                         |
 
 ## Mainnet opt-in
 

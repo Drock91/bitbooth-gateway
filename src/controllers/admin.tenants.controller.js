@@ -1,9 +1,6 @@
 import { adminService } from '../services/admin.service.js';
 import { jsonResponse } from '../middleware/error.middleware.js';
-import {
-  AdminTenantsQuery,
-  AdminTenantsUIQuery,
-} from '../validators/admin.schema.js';
+import { AdminTenantsQuery, AdminTenantsUIQuery } from '../validators/admin.schema.js';
 import { ValidationError } from '../lib/errors.js';
 import { escapeHtml } from '../lib/templates.js';
 import { stagePrefix } from '../lib/stage-prefix.js';

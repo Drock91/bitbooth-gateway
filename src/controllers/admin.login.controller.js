@@ -4,10 +4,7 @@ import { ValidationError } from '../lib/errors.js';
 import { THEME_CSS } from '../static/theme.css.js';
 import { escapeHtml } from '../lib/templates.js';
 import { stagePrefix } from '../lib/stage-prefix.js';
-import {
-  enforceAdminRateLimit,
-  extractClientIp,
-} from '../middleware/rate-limit.middleware.js';
+import { enforceAdminRateLimit, extractClientIp } from '../middleware/rate-limit.middleware.js';
 import { htmlResponse } from './admin.shared.js';
 
 function renderAdminLoginPage({ error, event } = {}) {

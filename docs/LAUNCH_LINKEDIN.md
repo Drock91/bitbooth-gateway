@@ -26,7 +26,7 @@ Three versions below. **Recommend Version 4 (the demo-honest one).** All claims 
 >
 > If you build agent tooling — DM me. First 10 builders to try it get a free 1k-call mainnet trial.
 >
-> Live demo + admin earnings dashboard:  heinrichstech.com/bitbooth.html
+> Live demo + admin earnings dashboard: heinrichstech.com/bitbooth.html
 > Source + roadmap: github.com/Drock91/bitbooth-gateway
 >
 > #x402 #AI #Agents #MCP #XRPL #Base

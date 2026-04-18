@@ -1,11 +1,16 @@
 name: npm-publish
 
+# DISABLED — D-rock publishes manually with 2FA. Auto-publish would
+# require setting an NPM_TOKEN repo secret + provenance config and is
+# not worth the surface area today. Re-enable by un-commenting the
+# `push:` trigger below + adding NPM_TOKEN under Settings → Secrets.
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'packages/mcp-fetch/**'
-      - '.changeset/**'
+  workflow_dispatch:
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - 'packages/mcp-fetch/**'
+  #     - '.changeset/**'
 
 concurrency:
   group: npm-publish

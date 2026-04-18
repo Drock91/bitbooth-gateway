@@ -1,10 +1,7 @@
 import { adminService } from '../services/admin.service.js';
 import { metricsService } from '../services/metrics.service.js';
 import { escapeHtml } from '../lib/templates.js';
-import {
-  enforceAdminRateLimit,
-  extractClientIp,
-} from '../middleware/rate-limit.middleware.js';
+import { enforceAdminRateLimit, extractClientIp } from '../middleware/rate-limit.middleware.js';
 import { THEME_CSS, BRAND_BAR_CSS, brandBar, htmlResponse } from './admin.shared.js';
 
 function renderMetricsDashboard(m, event) {

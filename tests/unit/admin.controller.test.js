@@ -55,7 +55,11 @@ vi.mock('../../src/repositories/tenants.repo.js', () => ({
   tenantsRepo: { updateStatus: mockUpdateStatus },
 }));
 
-import { getAdmin, postAdminLogin, getAdminLogout } from '../../src/controllers/admin.login.controller.js';
+import {
+  getAdmin,
+  postAdminLogin,
+  getAdminLogout,
+} from '../../src/controllers/admin.login.controller.js';
 import {
   listTenants,
   listTenantsUI,

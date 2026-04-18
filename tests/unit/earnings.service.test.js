@@ -67,11 +67,16 @@ describe('earningsService.summary', () => {
   const xrplTestnet = fakePayment({ network: 'xrpl:1', amountWei: '500000', assetSymbol: 'XRP' });
 
   it('defaults to mode=real, filtering out testnet payments', async () => {
-    mockScanAllConfirmed.mockResolvedValue([testnetPayment, mainnetPayment, xrplMainnet, xrplTestnet]);
+    mockScanAllConfirmed.mockResolvedValue([
+      testnetPayment,
+      mainnetPayment,
+      xrplMainnet,
+      xrplTestnet,
+    ]);
     const result = await earningsService.summary();
     expect(result.mode).toBe('real');
     expect(result.totals.payments).toBe(2);
-    const networks = result.byChain.map(c => c.network);
+    const networks = result.byChain.map((c) => c.network);
     expect(networks).toContain('eip155:8453');
     expect(networks).toContain('xrpl:0');
     expect(networks).not.toContain('eip155:84532');
@@ -79,18 +84,28 @@ describe('earningsService.summary', () => {
   });
 
   it('mode=testnet returns only testnet payments', async () => {
-    mockScanAllConfirmed.mockResolvedValue([testnetPayment, mainnetPayment, xrplMainnet, xrplTestnet]);
+    mockScanAllConfirmed.mockResolvedValue([
+      testnetPayment,
+      mainnetPayment,
+      xrplMainnet,
+      xrplTestnet,
+    ]);
     const result = await earningsService.summary({ mode: 'testnet' });
     expect(result.mode).toBe('testnet');
     expect(result.totals.payments).toBe(2);
-    const networks = result.byChain.map(c => c.network);
+    const networks = result.byChain.map((c) => c.network);
     expect(networks).toContain('eip155:84532');
     expect(networks).toContain('xrpl:1');
     expect(networks).not.toContain('eip155:8453');
   });
 
   it('mode=all returns all payments', async () => {
-    mockScanAllConfirmed.mockResolvedValue([testnetPayment, mainnetPayment, xrplMainnet, xrplTestnet]);
+    mockScanAllConfirmed.mockResolvedValue([
+      testnetPayment,
+      mainnetPayment,
+      xrplMainnet,
+      xrplTestnet,
+    ]);
     const result = await earningsService.summary({ mode: 'all' });
     expect(result.mode).toBe('all');
     expect(result.totals.payments).toBe(4);
@@ -100,8 +115,8 @@ describe('earningsService.summary', () => {
   it('includes isTestnet flag in byChain entries', async () => {
     mockScanAllConfirmed.mockResolvedValue([testnetPayment, mainnetPayment]);
     const result = await earningsService.summary({ mode: 'all' });
-    const sepolia = result.byChain.find(c => c.network === 'eip155:84532');
-    const base = result.byChain.find(c => c.network === 'eip155:8453');
+    const sepolia = result.byChain.find((c) => c.network === 'eip155:84532');
+    const base = result.byChain.find((c) => c.network === 'eip155:8453');
     expect(sepolia.isTestnet).toBe(true);
     expect(base.isTestnet).toBe(false);
   });
@@ -109,8 +124,8 @@ describe('earningsService.summary', () => {
   it('includes isTestnet flag in recent payments', async () => {
     mockScanAllConfirmed.mockResolvedValue([testnetPayment, mainnetPayment]);
     const result = await earningsService.summary({ mode: 'all' });
-    const sepoliaRecent = result.recent.find(r => r.network === 'eip155:84532');
-    const baseRecent = result.recent.find(r => r.network === 'eip155:8453');
+    const sepoliaRecent = result.recent.find((r) => r.network === 'eip155:84532');
+    const baseRecent = result.recent.find((r) => r.network === 'eip155:8453');
     expect(sepoliaRecent.isTestnet).toBe(true);
     expect(baseRecent.isTestnet).toBe(false);
   });

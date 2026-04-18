@@ -16,9 +16,7 @@ import { stagePrefix } from '../lib/stage-prefix.js';
 
 function extractIp(event) {
   return (
-    event?.requestContext?.identity?.sourceIp ||
-    event?.requestContext?.http?.sourceIp ||
-    'unknown'
+    event?.requestContext?.identity?.sourceIp || event?.requestContext?.http?.sourceIp || 'unknown'
   );
 }
 

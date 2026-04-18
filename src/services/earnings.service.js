@@ -9,13 +9,43 @@ import { paymentsRepo } from '../repositories/payments.repo.js';
 
 // CAIP-2 → pretty label + chain colour + testnet flag
 const CHAIN_META = {
-  'eip155:84532': { label: 'Base Sepolia', color: '#0052FF', unit: 'USDC', decimals: 6, isTestnet: true },
-  'eip155:8453': { label: 'Base Mainnet', color: '#0052FF', unit: 'USDC', decimals: 6, isTestnet: false },
-  'eip155:1440002': { label: 'XRPL EVM', color: '#7CF1A0', unit: 'USDC', decimals: 6, isTestnet: true },
+  'eip155:84532': {
+    label: 'Base Sepolia',
+    color: '#0052FF',
+    unit: 'USDC',
+    decimals: 6,
+    isTestnet: true,
+  },
+  'eip155:8453': {
+    label: 'Base Mainnet',
+    color: '#0052FF',
+    unit: 'USDC',
+    decimals: 6,
+    isTestnet: false,
+  },
+  'eip155:1440002': {
+    label: 'XRPL EVM',
+    color: '#7CF1A0',
+    unit: 'USDC',
+    decimals: 6,
+    isTestnet: true,
+  },
   'xrpl:0': { label: 'XRPL Mainnet', color: '#23E5DB', unit: 'XRP', decimals: 6, isTestnet: false },
   'xrpl:1': { label: 'XRPL Testnet', color: '#23E5DB', unit: 'XRP', decimals: 6, isTestnet: true },
-  'solana:mainnet': { label: 'Solana', color: '#14F195', unit: 'USDC', decimals: 6, isTestnet: false },
-  'solana:devnet': { label: 'Solana Devnet', color: '#14F195', unit: 'USDC', decimals: 6, isTestnet: true },
+  'solana:mainnet': {
+    label: 'Solana',
+    color: '#14F195',
+    unit: 'USDC',
+    decimals: 6,
+    isTestnet: false,
+  },
+  'solana:devnet': {
+    label: 'Solana Devnet',
+    color: '#14F195',
+    unit: 'USDC',
+    decimals: 6,
+    isTestnet: true,
+  },
   unknown: { label: 'Unknown', color: '#8888a0', unit: '—', decimals: 6, isTestnet: false },
 };
 
@@ -40,8 +70,9 @@ function toUnit(amountWei, decimals = 6) {
  * @returns {string} ISO-8601 hour bucket
  */
 function hourBucket(d) {
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), d.getUTCHours()))
-    .toISOString();
+  return new Date(
+    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), d.getUTCHours()),
+  ).toISOString();
 }
 
 export { CHAIN_META };
@@ -53,13 +84,14 @@ export const earningsService = {
   async summary(opts = {}) {
     const mode = opts.mode || 'real';
     const raw = await paymentsRepo.scanAllConfirmed();
-    const all = mode === 'all'
-      ? raw
-      : raw.filter(p => {
-        const net = chainKey(p);
-        const meta = CHAIN_META[net] || CHAIN_META.unknown;
-        return mode === 'testnet' ? meta.isTestnet : !meta.isTestnet;
-      });
+    const all =
+      mode === 'all'
+        ? raw
+        : raw.filter((p) => {
+            const net = chainKey(p);
+            const meta = CHAIN_META[net] || CHAIN_META.unknown;
+            return mode === 'testnet' ? meta.isTestnet : !meta.isTestnet;
+          });
     const now = Date.now();
     const DAY_MS = 24 * 60 * 60 * 1000;
     const cutoff24h = now - DAY_MS;
@@ -88,12 +120,26 @@ export const earningsService = {
       const value = toUnit(p.amountWei, meta.decimals);
 
       // By chain
-      byChain[network] ||= { network, label: meta.label, color: meta.color, unit: meta.unit, isTestnet: Boolean(meta.isTestnet), count: 0, amount: 0 };
+      byChain[network] ||= {
+        network,
+        label: meta.label,
+        color: meta.color,
+        unit: meta.unit,
+        isTestnet: Boolean(meta.isTestnet),
+        count: 0,
+        amount: 0,
+      };
       byChain[network].count++;
       byChain[network].amount += value;
 
       // By agent (accountId)
-      byAgent[p.accountId] ||= { accountId: p.accountId, count: 0, amount: 0, firstSeen: ts, lastSeen: 0 };
+      byAgent[p.accountId] ||= {
+        accountId: p.accountId,
+        count: 0,
+        amount: 0,
+        firstSeen: ts,
+        lastSeen: 0,
+      };
       byAgent[p.accountId].count++;
       byAgent[p.accountId].amount += value;
       if (ts > byAgent[p.accountId].lastSeen) byAgent[p.accountId].lastSeen = ts;
@@ -145,7 +191,9 @@ export const earningsService = {
     }
 
     const byChainArr = Object.values(byChain).sort((a, b) => b.amount - a.amount);
-    const byAgentArr = Object.values(byAgent).sort((a, b) => b.count - a.count).slice(0, 20);
+    const byAgentArr = Object.values(byAgent)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 20);
     const byResourceArr = Object.values(byResource).sort((a, b) => b.count - a.count);
 
     return {

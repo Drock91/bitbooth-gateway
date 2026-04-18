@@ -1,18 +1,18 @@
 ---
 name: Add a new chain
 about: Request support for a new payment rail (Solana mainnet, Stellar, Lightning, etc.)
-title: "[CHAIN] add support for "
+title: '[CHAIN] add support for '
 labels: enhancement, chain-adapter
 assignees: ''
 ---
 
 ## Chain
 
-- Name:                  <!-- e.g. Solana Mainnet -->
-- CAIP-2 ID:             <!-- e.g. solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp -->
-- Settlement asset(s):   <!-- USDC-SPL / SOL / etc -->
-- Median settlement:     <!-- "~400ms" -->
-- Why it matters:        <!-- "10M agents on this chain already" / "0 fees" / etc -->
+- Name: <!-- e.g. Solana Mainnet -->
+- CAIP-2 ID: <!-- e.g. solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp -->
+- Settlement asset(s): <!-- USDC-SPL / SOL / etc -->
+- Median settlement: <!-- "~400ms" -->
+- Why it matters: <!-- "10M agents on this chain already" / "0 fees" / etc -->
 
 ## What's already in the repo
 

@@ -1,13 +1,17 @@
 name: autopilot
+# DISABLED — we run autopilot in a local Docker container instead
+# (docker compose -f docker-compose.autopilot.yml up -d), powered by
+# D-rock's Claude Pro subscription instead of API tokens. No need to
+# also burn ANTHROPIC_API_KEY credits via GitHub Actions cron.
+# Re-enable by un-commenting the schedule below + setting ANTHROPIC_API_KEY.
 on:
-  schedule:
-    # Every 4 hours (UTC). ~6 ticks/day.
-    - cron: '0 */4 * * *'
   workflow_dispatch:
     inputs:
       goalId:
         description: 'Specific goal ID to work on (optional)'
         required: false
+  # schedule:
+  #   - cron: '0 */4 * * *'
 
 permissions:
   contents: write # commit + push to autopilot branch

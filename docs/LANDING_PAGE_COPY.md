@@ -7,9 +7,11 @@ You said the landing page is in a separate repo I don't have access to. Here's t
 ## Above the fold
 
 ### Headline (h1)
+
 > Pay-per-call APIs for AI agents.
 
 ### Subhead (≤ 22 words)
+
 > Your agent gets a wallet, pays USDC per request, and you get a clean SDK. No accounts, no API keys, no humans in the loop.
 
 ### Two CTAs side-by-side
@@ -18,9 +20,7 @@ You said the landing page is in a separate repo I don't have access to. Here's t
 <a href="https://www.npmjs.com/package/@bitbooth/mcp-fetch" class="cta cta-primary">
   npm install @bitbooth/mcp-fetch
 </a>
-<button id="run-demo" class="cta cta-secondary">
-  Run live demo →
-</button>
+<button id="run-demo" class="cta cta-secondary">Run live demo →</button>
 ```
 
 The "Run live demo" button is what the existing 6-chain race demo wires into. Keep that working.
@@ -65,12 +65,15 @@ Last tx: 493F6F1ADB9D... (xrpscan link)
 Three side-by-side cards:
 
 ### Claude Code
+
 ```bash
 claude mcp add @bitbooth/mcp-fetch
 ```
 
 ### Cursor / Continue / Cline
+
 Add to `~/.cursor/mcp.json`:
+
 ```json
 {
   "mcpServers": {
@@ -84,6 +87,7 @@ Add to `~/.cursor/mcp.json`:
 ```
 
 ### From scratch (raw curl)
+
 ```bash
 curl -X POST https://app.heinrichstech.com/v1/fetch \
   -H "Content-Type: application/json" \
@@ -130,12 +134,18 @@ Keep claims tight to verified reality. When you cross 100 real customers, swap i
 
 ```html
 <title>BitBooth — Pay-per-call APIs for AI agents (x402)</title>
-<meta name="description" content="MCP server that lets AI agents pay USDC per API call via x402. No accounts, no API keys. Live on XRPL Mainnet + Base Sepolia.">
-<meta property="og:title" content="BitBooth — agent payments without humans">
-<meta property="og:description" content="Pay 0.005 USDC, get web content as markdown in 1.3s. No signup required.">
-<meta property="og:url" content="https://heinrichstech.com/bitbooth.html">
-<meta property="og:image" content="https://heinrichstech.com/bitbooth-og.png">
-<meta name="twitter:card" content="summary_large_image">
+<meta
+  name="description"
+  content="MCP server that lets AI agents pay USDC per API call via x402. No accounts, no API keys. Live on XRPL Mainnet + Base Sepolia."
+/>
+<meta property="og:title" content="BitBooth — agent payments without humans" />
+<meta
+  property="og:description"
+  content="Pay 0.005 USDC, get web content as markdown in 1.3s. No signup required."
+/>
+<meta property="og:url" content="https://heinrichstech.com/bitbooth.html" />
+<meta property="og:image" content="https://heinrichstech.com/bitbooth-og.png" />
+<meta name="twitter:card" content="summary_large_image" />
 ```
 
 You'll need a 1200x630 PNG at `/bitbooth-og.png` for the share preview. Use the same gradient-dot + "BitBooth" wordmark from the admin login page for visual consistency.

@@ -5,6 +5,7 @@ Goal: get `@bitbooth/mcp-fetch` listed on **registry.modelcontextprotocol.io** s
 This requires interactive auth from you. ~5 min of clicks.
 
 ## Prereqs (you have these)
+
 - ✅ `@bitbooth/mcp-fetch@1.0.0` published to npm
 - ✅ `packages/mcp-fetch/server.json` filled out
 - ✅ `mcp-publisher.exe` already installed
@@ -26,6 +27,7 @@ mcp-publisher.exe publish
 ```
 
 Expected output of step 3:
+
 ```
 ✓ Validated io.github.drock91/bitbooth-fetch@1.0.0
 ✓ Published to registry.modelcontextprotocol.io
@@ -35,6 +37,7 @@ Expected output of step 3:
 ## After it lands
 
 The package will be auto-discoverable in:
+
 - Claude Code's `/mcp` install picker
 - Cursor's MCP marketplace
 - Continue.dev's tool catalog
@@ -44,20 +47,22 @@ Should appear within ~5 min of publish.
 
 ## If something breaks
 
-| Error | Cause | Fix |
-|---|---|---|
-| `mcpName mismatch` | server.json `name` doesn't start with `io.github.drock91/` | Already correct, shouldn't happen |
-| `npm package not found` | Registry can't fetch the npm tarball | `npm whoami` first to confirm logged in, then `npm view @bitbooth/mcp-fetch` to confirm it resolves |
-| `validation failed: server.json schema` | Schema URL is stale | Update `$schema` to latest from https://static.modelcontextprotocol.io/schemas/ |
-| `not authenticated` | OAuth token expired | Re-run `mcp-publisher.exe login github` |
+| Error                                   | Cause                                                      | Fix                                                                                                 |
+| --------------------------------------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `mcpName mismatch`                      | server.json `name` doesn't start with `io.github.drock91/` | Already correct, shouldn't happen                                                                   |
+| `npm package not found`                 | Registry can't fetch the npm tarball                       | `npm whoami` first to confirm logged in, then `npm view @bitbooth/mcp-fetch` to confirm it resolves |
+| `validation failed: server.json schema` | Schema URL is stale                                        | Update `$schema` to latest from https://static.modelcontextprotocol.io/schemas/                     |
+| `not authenticated`                     | OAuth token expired                                        | Re-run `mcp-publisher.exe login github`                                                             |
 
 ## Bonus — get featured
 
 After publish, post in:
+
 - https://github.com/modelcontextprotocol/servers/discussions (announce category)
 - https://discord.gg/modelcontextprotocol (#new-servers channel)
 
 Keep it 2 sentences:
+
 > Just published @bitbooth/mcp-fetch — pay-per-fetch MCP server using x402 (Coinbase + Linux Foundation spec). Agent's wallet pays $0.005 USDC, gets web content as markdown. Demo: heinrichstech.com/bitbooth.html
 
 That gets you on the "what's new this week" rotation in MCP newsletters.

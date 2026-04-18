@@ -31,6 +31,7 @@ echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":
 Need: a Base Sepolia wallet with ~0.01 USDC + ~0.001 ETH.
 
 Faucets:
+
 - ETH for gas: https://www.alchemy.com/faucets/base-sepolia
 - USDC: https://faucet.circle.com (select Base Sepolia)
 
@@ -47,17 +48,18 @@ BITBOOTH_AGENT_KEY=0x<your-base-sepolia-wallet-pk> \
 
 ## Common failures + fixes
 
-| Symptom | Fix |
-|---|---|
-| `Agent wallet key required` | Set `BITBOOTH_AGENT_KEY=0x...` (no quotes around the value in shell) |
-| `Wallet 0x... has no ETH for gas` | Use the Alchemy Base Sepolia faucet |
-| `Wallet 0x... has no USDC` | Use the Circle Base Sepolia faucet |
-| `Unexpected HTTP 502` | Gateway upstream is down — try again in ~30s, file an issue if persistent |
-| `Post-payment fetch failed (HTTP 400)` | Almost always a stale `BITBOOTH_API_URL`. Unset it to use the default |
+| Symptom                                | Fix                                                                       |
+| -------------------------------------- | ------------------------------------------------------------------------- |
+| `Agent wallet key required`            | Set `BITBOOTH_AGENT_KEY=0x...` (no quotes around the value in shell)      |
+| `Wallet 0x... has no ETH for gas`      | Use the Alchemy Base Sepolia faucet                                       |
+| `Wallet 0x... has no USDC`             | Use the Circle Base Sepolia faucet                                        |
+| `Unexpected HTTP 502`                  | Gateway upstream is down — try again in ~30s, file an issue if persistent |
+| `Post-payment fetch failed (HTTP 400)` | Almost always a stale `BITBOOTH_API_URL`. Unset it to use the default     |
 
 ## What "production ready" means here
 
 If all 3 tests pass:
+
 - Your install correctly speaks the MCP protocol to any client
 - Your wallet correctly signs USDC payments on Base Sepolia
 - The gateway correctly verifies your tx and returns content
