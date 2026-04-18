@@ -7,16 +7,16 @@ import { paymentsRepo } from '../repositories/payments.repo.js';
  * daily rollups in a separate table; until then this is fine.
  */
 
-// CAIP-2 → pretty label + chain colour
+// CAIP-2 → pretty label + chain colour + testnet flag
 const CHAIN_META = {
-  'eip155:84532': { label: 'Base Sepolia', color: '#0052FF', unit: 'USDC', decimals: 6 },
-  'eip155:8453': { label: 'Base Mainnet', color: '#0052FF', unit: 'USDC', decimals: 6 },
-  'eip155:1440002': { label: 'XRPL EVM', color: '#7CF1A0', unit: 'USDC', decimals: 6 },
-  'xrpl:0': { label: 'XRPL Mainnet', color: '#23E5DB', unit: 'XRP', decimals: 6 },
-  'xrpl:1': { label: 'XRPL Testnet', color: '#23E5DB', unit: 'XRP', decimals: 6 },
-  'solana:mainnet': { label: 'Solana', color: '#14F195', unit: 'USDC', decimals: 6 },
-  'solana:devnet': { label: 'Solana Devnet', color: '#14F195', unit: 'USDC', decimals: 6 },
-  unknown: { label: 'Unknown', color: '#8888a0', unit: '—', decimals: 6 },
+  'eip155:84532': { label: 'Base Sepolia', color: '#0052FF', unit: 'USDC', decimals: 6, isTestnet: true },
+  'eip155:8453': { label: 'Base Mainnet', color: '#0052FF', unit: 'USDC', decimals: 6, isTestnet: false },
+  'eip155:1440002': { label: 'XRPL EVM', color: '#7CF1A0', unit: 'USDC', decimals: 6, isTestnet: true },
+  'xrpl:0': { label: 'XRPL Mainnet', color: '#23E5DB', unit: 'XRP', decimals: 6, isTestnet: false },
+  'xrpl:1': { label: 'XRPL Testnet', color: '#23E5DB', unit: 'XRP', decimals: 6, isTestnet: true },
+  'solana:mainnet': { label: 'Solana', color: '#14F195', unit: 'USDC', decimals: 6, isTestnet: false },
+  'solana:devnet': { label: 'Solana Devnet', color: '#14F195', unit: 'USDC', decimals: 6, isTestnet: true },
+  unknown: { label: 'Unknown', color: '#8888a0', unit: '—', decimals: 6, isTestnet: false },
 };
 
 function chainKey(p) {
@@ -44,9 +44,22 @@ function hourBucket(d) {
     .toISOString();
 }
 
+export { CHAIN_META };
+
 export const earningsService = {
-  async summary() {
-    const all = await paymentsRepo.scanAllConfirmed();
+  /**
+   * @param {{ mode?: 'real' | 'testnet' | 'all' }} [opts]
+   */
+  async summary(opts = {}) {
+    const mode = opts.mode || 'real';
+    const raw = await paymentsRepo.scanAllConfirmed();
+    const all = mode === 'all'
+      ? raw
+      : raw.filter(p => {
+        const net = chainKey(p);
+        const meta = CHAIN_META[net] || CHAIN_META.unknown;
+        return mode === 'testnet' ? meta.isTestnet : !meta.isTestnet;
+      });
     const now = Date.now();
     const DAY_MS = 24 * 60 * 60 * 1000;
     const cutoff24h = now - DAY_MS;
@@ -75,7 +88,7 @@ export const earningsService = {
       const value = toUnit(p.amountWei, meta.decimals);
 
       // By chain
-      byChain[network] ||= { network, label: meta.label, color: meta.color, unit: meta.unit, count: 0, amount: 0 };
+      byChain[network] ||= { network, label: meta.label, color: meta.color, unit: meta.unit, isTestnet: Boolean(meta.isTestnet), count: 0, amount: 0 };
       byChain[network].count++;
       byChain[network].amount += value;
 
@@ -111,6 +124,7 @@ export const earningsService = {
         network,
         chainLabel: meta.label,
         chainColor: meta.color,
+        isTestnet: Boolean(meta.isTestnet),
         asset: p.assetSymbol || meta.unit,
         amount: value,
         accountId: p.accountId,
@@ -136,6 +150,7 @@ export const earningsService = {
 
     return {
       generatedAt: new Date().toISOString(),
+      mode,
       totals: {
         payments: totalPayments,
         uniqueAgents: Object.keys(byAgent).length,

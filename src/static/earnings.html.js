@@ -71,6 +71,14 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);min-height:10
 .table a:hover{text-decoration:underline}
 .pill{display:inline-block;padding:2px 6px;border-radius:3px;font-size:10px;font-weight:600;letter-spacing:0.04em;background:rgba(255,255,255,0.06)}
 
+/* Mode toggle */
+.toggle-group{display:flex;gap:2px;background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:2px}
+.toggle-btn{padding:5px 12px;border:none;border-radius:3px;font-family:var(--mono);font-size:11px;cursor:pointer;background:transparent;color:var(--ink-dim);transition:background 0.15s,color 0.15s}
+.toggle-btn:hover{color:var(--ink)}
+.toggle-btn.active{background:var(--panel);color:var(--accent);font-weight:600}
+.badge-testnet{display:inline-block;padding:1px 5px;border-radius:3px;font-size:9px;font-weight:700;letter-spacing:0.06em;background:rgba(245,158,11,0.15);color:var(--warn);margin-left:6px;vertical-align:middle}
+.mode-label{font-family:var(--mono);font-size:11px;color:var(--ink-mute);margin-left:8px}
+
 .loading{text-align:center;color:var(--ink-mute);padding:40px;font-family:var(--mono);font-size:12px}
 .err{color:var(--danger);background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);padding:12px;border-radius:4px;font-family:var(--mono);font-size:12px}
 
@@ -88,6 +96,11 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);min-height:10
       <a href="${base}/admin/change-password">Password</a>
       <a href="${base}/admin/logout">Logout</a>
     </nav>
+    <div class="toggle-group" id="mode-toggle">
+      <button class="toggle-btn active" data-mode="real">Real money</button>
+      <button class="toggle-btn" data-mode="testnet">Testnet</button>
+      <button class="toggle-btn" data-mode="all">All</button>
+    </div>
     <div class="spacer"></div>
     <div class="status"><span class="status-dot"></span> <span id="status-text">live</span></div>
     <div class="refresh" id="refresh-text">auto-refresh 30s</div>
@@ -102,6 +115,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);min-height:10
 <script>
 const REFRESH_MS = 30_000;
 let chart;
+let currentMode = 'real';
 
 const CHAIN_UNIT = {
   'eip155:84532': 'USDC', 'eip155:8453': 'USDC', 'eip155:1440002': 'USDC',
@@ -134,16 +148,24 @@ function escapeHtml(s) {
   return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
+const MODE_LABELS = {
+  real: 'Real revenue (mainnet only)',
+  testnet: 'Testnet activity (dev only)',
+  all: 'All networks (real + testnet)',
+};
+
 function renderDashboard(data) {
   const grid = document.getElementById('grid');
   const t = data.totals;
+  const mode = data.mode || currentMode;
+  const modeLabel = MODE_LABELS[mode] || MODE_LABELS.real;
 
-  // Chain list rendering (skip if empty)
+  // Chain list rendering with TESTNET badges
   const chainRows = data.byChain.length
     ? data.byChain.map(c => \`
       <div class="row">
         <span class="dot" style="background:\${c.color}"></span>
-        <span class="label">\${escapeHtml(c.label)}</span>
+        <span class="label">\${escapeHtml(c.label)}\${c.isTestnet ? '<span class="badge-testnet">TESTNET</span>' : ''}</span>
         <span class="stat">\${c.count} pays</span>
         <span class="stat stat-main">\${fmtAmount(c.amount, c.unit)}</span>
       </div>\`).join('')
@@ -170,7 +192,7 @@ function renderDashboard(data) {
   const recentRows = data.recent.length
     ? data.recent.map(p => \`
       <tr>
-        <td><span class="pill" style="background:\${p.chainColor}33;color:\${p.chainColor}">\${escapeHtml(p.chainLabel)}</span></td>
+        <td><span class="pill" style="background:\${p.chainColor}33;color:\${p.chainColor}">\${escapeHtml(p.chainLabel)}</span>\${p.isTestnet ? '<span class="badge-testnet">TESTNET</span>' : ''}</td>
         <td>\${fmtAmount(p.amount, p.asset)}</td>
         <td title="\${escapeHtml(p.accountId)}">\${escapeHtml((p.accountId || '').slice(0, 24))}</td>
         <td>\${escapeHtml(p.resource)}</td>
@@ -181,14 +203,14 @@ function renderDashboard(data) {
 
   grid.innerHTML = \`
     <div class="panel">
-      <div class="panel-title">Total Payments</div>
+      <div class="panel-title">Total Payments<span class="mode-label">\${escapeHtml(modeLabel)}</span></div>
       <div class="kpi">\${t.payments.toLocaleString()}<span class="kpi-unit">all time</span></div>
       <div class="kpi-sub">\${t.uniqueAgents} unique agents</div>
     </div>
     <div class="panel">
       <div class="panel-title">Last 24 Hours</div>
       <div class="kpi">\${t.last24h.toFixed(4)}<span class="kpi-unit">units</span></div>
-      <div class="kpi-sub">mixed across chains</div>
+      <div class="kpi-sub">\${escapeHtml(modeLabel)}</div>
     </div>
     <div class="panel">
       <div class="panel-title">Last 7 Days</div>
@@ -267,7 +289,7 @@ async function refresh() {
   const statusEl = document.getElementById('status-text');
   try {
     statusEl.textContent = 'refreshing…';
-    const r = await fetch('${base}/admin/earnings.json', { credentials: 'same-origin' });
+    const r = await fetch('${base}/admin/earnings.json?mode=' + currentMode, { credentials: 'same-origin' });
     if (r.status === 401 || r.status === 403) {
       document.getElementById('grid').innerHTML =
         '<div class="panel span4 err">Session expired. <a href="${base}/admin" style="color:#14f195">Sign in</a> to continue.</div>';
@@ -287,6 +309,15 @@ async function refresh() {
 
 refresh();
 setInterval(refresh, REFRESH_MS);
+
+document.getElementById('mode-toggle').addEventListener('click', e => {
+  const btn = e.target.closest('[data-mode]');
+  if (!btn) return;
+  currentMode = btn.dataset.mode;
+  document.querySelectorAll('#mode-toggle .toggle-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  refresh();
+});
 </script>
 </body>
 </html>`;

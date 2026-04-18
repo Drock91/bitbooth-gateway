@@ -1,6 +1,7 @@
 import { LANDING_HTML } from '../static/landing.html.js';
 import { FETCH_HTML } from '../static/fetch.html.js';
 import { SWAGGER_HTML } from '../static/swagger-ui.html.js';
+import { AGENT_DOCS_HTML } from '../static/agent-docs.html.js';
 import { loadOpenapiYaml } from '../lib/load-openapi.js';
 
 const LANDING_CSP = [
@@ -45,6 +46,10 @@ export async function getFetch() {
 
 export async function getDocs() {
   return htmlResponse(200, SWAGGER_HTML, DOCS_CSP);
+}
+
+export async function getAgentDocs() {
+  return htmlResponse(200, AGENT_DOCS_HTML, LANDING_CSP);
 }
 
 export async function getOpenapiYaml() {

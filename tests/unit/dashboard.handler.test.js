@@ -19,6 +19,7 @@ vi.mock('../../src/controllers/landing.controller.js', () => ({
   getLanding: vi.fn().mockResolvedValue({ statusCode: 200, headers: {}, body: '' }),
   getFetch: vi.fn().mockResolvedValue({ statusCode: 200, headers: {}, body: '' }),
   getDocs: vi.fn().mockResolvedValue({ statusCode: 200, headers: {}, body: '' }),
+  getAgentDocs: vi.fn().mockResolvedValue({ statusCode: 200, headers: {}, body: '' }),
   getOpenapiYaml: vi.fn().mockResolvedValue({ statusCode: 200, headers: {}, body: '' }),
 }));
 vi.mock('../../src/controllers/demo.controller.js', () => ({

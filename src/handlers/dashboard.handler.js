@@ -10,6 +10,7 @@ import {
   getLanding,
   getFetch,
   getDocs,
+  getAgentDocs,
   getOpenapiYaml,
 } from '../controllers/landing.controller.js';
 import { postDemoSignup } from '../controllers/demo.controller.js';
@@ -43,6 +44,7 @@ const routes = {
   'GET /': getLanding,
   'GET /fetch': getFetch,
   'GET /docs': getDocs,
+  'GET /docs/agents': getAgentDocs,
   'GET /openapi.yaml': getOpenapiYaml,
   'POST /demo/signup': postDemoSignup,
   'GET /dashboard': getDashboard,

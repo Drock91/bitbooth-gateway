@@ -30,9 +30,16 @@ async function requireSession(event) {
   return { session, rlInfo };
 }
 
+function parseMode(event) {
+  const raw = event?.queryStringParameters?.mode;
+  if (raw === 'testnet' || raw === 'all') return raw;
+  return 'real';
+}
+
 export async function getEarningsJson(event) {
   const { session, rlInfo } = await requireSession(event);
-  const summary = await earningsService.summary();
+  const mode = parseMode(event);
+  const summary = await earningsService.summary({ mode });
   const res = jsonResponse(200, summary);
   res.headers = {
     ...res.headers,

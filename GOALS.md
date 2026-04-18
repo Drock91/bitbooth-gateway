@@ -4,7 +4,40 @@
 
 **Strategy:** demo today → moat (JS rendering) in 2 weeks → marketplace in 90 days. See `.agent/CLAUDE_LOOP.md` for full mission.
 
-**Status legend:** `pending` | `in-progress` | `done` | `blocked` | `needs-user`
+**Status legend (dashboard-parseable):** `open` | `in_progress` | `done` | `blocked`
+
+## Goal table (parsed by the dashboard at http://localhost:4020)
+
+| Goal | P | Status | Est | Title |
+|---|---|---|---|---|
+| G-001 | P0 | done | 30m | Earnings dashboard testnet/mainnet toggle (autopilot completed) |
+| G-002 | P0 | done | 60m | Reframe README + mcp-fetch + LinkedIn as honest demo |
+| G-003 | P0 | blocked | 5m | Smoke-test npm v1.0.1 install (needs user `npm publish` 2FA) |
+| G-004 | P0 | done | 90m | Build /docs/agents agent-onboarding page |
+| G-010 | P1 | open | 240m | mode:render via Playwright (JS rendering — the real moat) |
+| G-011 | P1 | open | 60m | Replace naive html→md with Readability+Turndown |
+| G-012 | P1 | open | 180m | DDB-backed shared cache (multiple agents share one fetch) |
+| G-013 | P1 | open | 240m | Per-tenant rate-limit pooling — make plan tiers matter |
+| G-020 | P2 | blocked | 5m | Submit to MCP Registry (needs user GitHub OAuth) |
+| G-021 | P2 | blocked | 60m | Cold-email 10 MCP authors (needs user to send) |
+| G-022 | P2 | open | 90m | Blog post: Shipping the first x402 MCP server |
+| G-023 | P2 | open | 30m | Add 30s screencast or GIF to README hero |
+| G-024 | P2 | open | 30m | Submit to directories (HN, Product Hunt, awesome-mcp) |
+| G-030 | P3 | open | 60m | Delete 5 stub exchange adapter directories |
+| G-031 | P3 | open | 180m | TOTP 2FA on admin console |
+| G-032 | P3 | open | 30m | Split admin.controller.js (638 lines into 4 files) |
+| G-033 | P3 | open | 120m | Materialize daily earnings rollup table |
+| G-034 | P3 | open | 180m | Real Moonpay adapter (replace stub) |
+| G-035 | P3 | open | 60m | Wire Solana + XRPL-EVM into buildChallenge |
+| G-040 | P3 | open | 600m | Marketplace MVP for third-party API publishers |
+| G-041 | P3 | open | 240m | Native XRPL signing in @bitbooth/mcp-fetch |
+| G-042 | P3 | open | 240m | Lightning Network (L402) adapter |
+
+---
+
+## Detailed acceptance criteria
+
+Each goal below has full acceptance contract — what the autopilot uses to know "done." When status changes, update BOTH the table above AND the section below.
 
 ---
 

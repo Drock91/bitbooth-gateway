@@ -68,8 +68,8 @@ describe('ApiGateway construct — route count', () => {
   const { template } = buildTemplate();
   const methods = collectMethods(template);
 
-  it('creates exactly 32 non-OPTIONS API methods', () => {
-    expect(methods.length).toBe(32);
+  it('creates exactly 33 non-OPTIONS API methods', () => {
+    expect(methods.length).toBe(33);
   });
 
   it('creates 2 GET health routes (health + ready)', () => {

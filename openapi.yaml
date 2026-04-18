@@ -760,6 +760,23 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
 
+  /docs/agents:
+    get:
+      tags: [docs]
+      summary: Agent install + setup guide (HTML)
+      operationId: getAgentDocs
+      description: |
+        Public agent-onboarding page. Step-by-step install for Claude Desktop,
+        Claude Code, Cursor, Continue.dev, plus testnet faucet links and
+        troubleshooting. Linked from the root landing page and the npm package
+        README. No auth required.
+      responses:
+        '200':
+          description: HTML agent setup guide
+          content:
+            text/html:
+              schema: { type: string }
+
   /admin/change-password:
     get:
       tags: [admin]

@@ -123,7 +123,9 @@ export class ApiGateway extends Construct {
     // Lambda (same handler, same cold start). Keeps infra count at zero new
     // Lambdas while giving the product a public front door.
     this.api.root.addMethod('GET', dashboardInt);
-    this.api.root.addResource('docs').addMethod('GET', dashboardInt);
+    const docs = this.api.root.addResource('docs');
+    docs.addMethod('GET', dashboardInt);
+    docs.addResource('agents').addMethod('GET', dashboardInt);
     this.api.root.addResource('openapi.yaml').addMethod('GET', dashboardInt);
 
     // Frictionless demo signup — IP rate-limited in the Lambda, not at API GW,
