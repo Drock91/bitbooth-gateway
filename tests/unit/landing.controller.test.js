@@ -19,10 +19,10 @@ describe('landing.controller', () => {
       expect(res.headers['content-type']).toBe('text/html; charset=utf-8');
     });
 
-    it('contains obol brand name and tagline', async () => {
+    it('contains BitBooth brand name and tagline', async () => {
       const res = await getLanding();
-      expect(res.body).toContain('obol');
-      expect(res.body).toContain('Stripe for AI agents');
+      expect(res.body).toContain('BitBooth');
+      expect(res.body).toContain('Pay-per-call APIs');
     });
 
     it('includes demo signup form', async () => {
@@ -32,10 +32,11 @@ describe('landing.controller', () => {
       expect(res.body).toContain('/demo/signup');
     });
 
-    it('includes links to /docs and /dashboard', async () => {
+    it('includes links to /docs and /dashboard/signup', async () => {
       const res = await getLanding();
       expect(res.body).toContain('href="/docs"');
-      expect(res.body).toContain('href="/dashboard"');
+      // Top-nav CTA points at /dashboard/signup so users can grab a key
+      expect(res.body).toContain('/dashboard/signup');
     });
 
     it('sets strict CSP allowing only inline script/style', async () => {
@@ -57,11 +58,12 @@ describe('landing.controller', () => {
       expect(res.headers['cache-control']).toContain('public');
     });
 
-    it('lists all three pricing tiers', async () => {
+    it('lists per-call x402 pricing (no subscription tiers — pay-per-call only)', async () => {
       const res = await getLanding();
-      expect(res.body).toContain('$49/mo');
-      expect(res.body).toContain('$99/mo');
-      expect(res.body).toContain('$299/mo');
+      // Subscription tiers ($49/$99/$299) removed in the BitBooth landing
+      // refresh — the actual product is pay-per-call x402, not seats.
+      expect(res.body).toContain('$0.005');
+      expect(res.body).toContain('$0.02');
     });
   });
 

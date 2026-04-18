@@ -661,7 +661,7 @@ describe('X402Stack — DLQ sweep', () => {
   });
 });
 
-describe('X402Stack — WAF WebACL', () => {
+describe.skip('X402Stack — WAF WebACL (DISABLED for cost — see x402.stack.js)', () => {
   const template = buildTemplate();
 
   it('creates a WAF WebACL with REGIONAL scope', () => {
@@ -869,7 +869,7 @@ describe('X402Stack — CloudWatch Dashboard', () => {
   });
 });
 
-describe('X402Stack — health canary', () => {
+describe.skip('X402Stack — health canary (DISABLED for cost — see x402.stack.js)', () => {
   const template = buildTemplate();
 
   it('creates a Synthetics canary with stage-suffixed name', () => {
