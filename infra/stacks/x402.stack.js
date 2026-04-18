@@ -113,9 +113,15 @@ export class X402Stack extends Stack {
 
     const apiGw = new ApiGateway(this, 'ApiGw', { stage, lambdas, customDomain });
     const alarms = new Alarms(this, 'Alarms', { stage, lambdas, tables, apiGw });
-    new Waf(this, 'Waf', { stage, apiGw });
     new OpsDashboard(this, 'OpsDashboard', { stage, lambdas, tables, apiGw });
-    new HealthCanary(this, 'HealthCanary', { stage, apiGw, alarmTopic: alarms.alarmTopic });
+    // Cost-cut for survival mode: WAF (~$5/mo) + HealthCanary (~$10/mo) disabled
+    // until we have paying customers or hostile traffic. AWS credit runway
+    // extends from ~5 months to ~5+ years at current burn (~$2/mo).
+    // Re-enable when justified:
+    //   new Waf(this, 'Waf', { stage, apiGw });
+    //   new HealthCanary(this, 'HealthCanary', { stage, apiGw, alarmTopic: alarms.alarmTopic });
+    void alarms; // keep alarms reachable for future canary re-enable
+    void Waf; void HealthCanary; // imports stay so toggling back is one-line
 
     Tags.of(this).add('Environment', stage);
     Tags.of(this).add('Service', 'x402');
