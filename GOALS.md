@@ -2,7 +2,35 @@
 
 > Source of truth for the autopilot. Each goal has an ID, status, and acceptance criteria. The autopilot reads this file every tick and picks the highest-priority `pending` goal it can finish.
 
-**Strategy:** demo today → moat (JS rendering) in 2 weeks → marketplace in 90 days. See `.agent/CLAUDE_LOOP.md` for full mission.
+## 💰 The single lens for goal selection: REVENUE
+
+Everything in this file maps to one of these five revenue levers:
+
+1. **More paying calls** — ship a new paid endpoint agents will pay for; ship/promote MCP packages; submit to MCP Registry, awesome-mcp, HN; cold-email agent builders
+2. **Higher price per call** — moats (JS rendering, table extraction, anti-bot, caching) that justify higher pricing tiers
+3. **Lower cost per call** — caching, rate-limit pooling, cheaper upstream APIs, materialized rollups
+4. **Lower churn risk** — admin TOTP, observability, tenant-facing features
+5. **Unblock #1-#4** — bug fixes, security, infra reliability, doc clarity
+
+**If a goal doesn't map to one of those five, it doesn't go in this file.**
+
+### How we actually make money — the math
+
+Anthropic does NOT have a third-party billing API. "Claude tokens" as a payment rail isn't a thing. Don't waste ticks on it. **The play is x402: get agents to pay us per-call in USDC/XRP. That's the entire game.**
+
+Revenue math:
+- 1 active agent at 1000 calls/day × $0.005 = **$5/day = $150/mo**
+- 10 active agents = **$1,500/mo**
+- 100 active agents = **$15,000/mo**
+- 1,000 active agents = **$150,000/mo**
+
+**To get to 100 active agents** we need:
+1. **More tools they NEED to install us for** — every additional paid endpoint (mcp-youtube, mcp-pdf, mcp-search, mcp-ocr) is another wedge into an agent stack
+2. **Higher-value tools they pay more for** — JS rendering @ $0.02, PDF extraction @ $0.02, transcription @ $0.05/min compounds the per-call revenue
+3. **Discovery** — MCP Registry, awesome-mcp lists, HN, devs telling other devs
+4. **Friction-free install** — `npm install` + one env var, then it just works
+
+**Strategy:** demo today → ship 2 microservices + JS rendering moat in 2 weeks → first paying customers in 4 weeks → marketplace in 90 days. See `.agent/CLAUDE_LOOP.md` for full mission.
 
 **Status legend (dashboard-parseable):** `open` | `in_progress` | `done` | `blocked`
 
@@ -32,6 +60,12 @@
 | G-040 | P3 | open | 600m | Marketplace MVP for third-party API publishers |
 | G-041 | P3 | open | 240m | Native XRPL signing in @bitbooth/mcp-fetch |
 | G-042 | P3 | open | 240m | Lightning Network (L402) adapter |
+| G-050 | P1 | open | 480m | Ship @bitbooth/mcp-youtube — paid YouTube transcript MCP |
+| G-051 | P1 | open | 720m | Ship @bitbooth/mcp-pdf — paid PDF→markdown w/ tables |
+| G-052 | P2 | open | 480m | Ship @bitbooth/mcp-search — paid web search (Brave proxy) |
+| G-053 | P2 | open | 480m | Ship @bitbooth/mcp-onchain — multi-chain wallet/tx queries |
+| G-054 | P2 | open | 480m | Ship @bitbooth/mcp-ocr — image URL → extracted text |
+| G-055 | P3 | open | 480m | Ship @bitbooth/mcp-transcribe — audio/video → text (Whisper) |
 
 ---
 
