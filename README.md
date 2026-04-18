@@ -1,6 +1,10 @@
 # BitBooth
 
-**The payment gateway for the agentic web.** AI agents pay for APIs per-request in stablecoin — no API keys, no signup, no humans in the loop.
+**The first end-to-end working x402 reference implementation, shipped as an MCP server.** This repo is a demo of how AI agents pay for APIs per-request in stablecoin — no API keys, no signup, no humans in the loop.
+
+> ⚠️ **What this is today:** a reference implementation. The first paid endpoint (`/v1/fetch`, 0.005 USDC for URL → markdown) is functionally equivalent to the free `@modelcontextprotocol/server-fetch`. Install it to **learn the x402 protocol**, not to save time on web fetches.
+>
+> 🛣️ **What's next (2-week roadmap):** real moat over free alternatives. JS rendering (Playwright), better markdown extraction (Readability + Turndown), shared cache layer, then a marketplace where third-party API publishers can list paid endpoints.
 
 Built on the [x402 protocol](https://x402.gitbook.io) (HTTP 402 Payment Required) from the x402 Foundation (Coinbase + Linux Foundation).
 
@@ -92,20 +96,22 @@ One round-trip. **Verified end-to-end at 1.3s on XRPL Mainnet and Base Sepolia t
 
 ## Supported chains
 
-| Network | CAIP-2 | Asset | Status |
-|---|---|---|---|
-| Base Sepolia | `eip155:84532` | USDC | ✅ Live & end-to-end verified |
-| XRPL Mainnet | `xrpl:0` | XRP | ✅ Live & end-to-end verified |
-| XRPL Mainnet | `xrpl:0` | USDC (Bitstamp issuer) | ✅ Live (verifier wired, no end-to-end test) |
-| XRPL Mainnet | `xrpl:0` | RLUSD (Ripple issuer) | ⚙️ Verifier wired, awaiting trust line |
-| Base Mainnet | `eip155:8453` | USDC | ⚙️ Adapter ready, not enabled in current env |
-| XRPL Testnet | `xrpl:1` | XRP | ⚙️ Adapter ready, not enabled (staging is on mainnet) |
-| Solana Mainnet | `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp` | USDC-SPL | ⚙️ Adapter ready, not yet wired into challenge builder |
-| XRPL EVM Sidechain | `eip155:1440002` | USDC | ⚙️ Adapter ready, not yet wired into challenge builder |
-| Stellar | — | — | 🛣 Not yet implemented |
-| Bitcoin Lightning (L402) | — | sats | 🛣 Roadmap |
+| Network | CAIP-2 | Asset | Mainnet? | Status |
+|---|---|---|---|---|
+| **XRPL Mainnet** | `xrpl:0` | **XRP** | 💰 **REAL MONEY** | ✅ End-to-end verified — last real tx [`493F6F1A…`](https://xrpscan.com/tx/493F6F1ADB9D258898A028F1D0A34684F5DD8B8C9F99BC6FB3432EA1F8AA45C0) |
+| XRPL Mainnet | `xrpl:0` | USDC (Bitstamp issuer) | 💰 Real money | ✅ Verifier wired, awaiting first end-to-end real-money test |
+| XRPL Mainnet | `xrpl:0` | RLUSD (Ripple issuer) | 💰 Real money | ⚙️ Verifier wired, awaiting trust line setup |
+| Base Sepolia | `eip155:84532` | USDC | 🧪 **TESTNET (free)** | ✅ End-to-end verified — for **development only**, no real value |
+| Base Mainnet | `eip155:8453` | USDC | 💰 Real money | ⚙️ Adapter ready, **not enabled** (mainnet agent wallet not funded yet) |
+| XRPL Testnet | `xrpl:1` | XRP | 🧪 Testnet (free) | ⚙️ Adapter ready, not enabled |
+| Solana Mainnet | `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp` | USDC-SPL | 💰 Real money | ⚙️ Adapter code ready, not wired into challenge builder |
+| XRPL EVM Sidechain | `eip155:1440002` | USDC | 💰 Real money | ⚙️ Adapter code ready, not wired into challenge builder |
+| Stellar | — | — | — | 🛣 Not yet implemented |
+| Bitcoin Lightning (L402) | — | sats | 💰 Real money | 🛣 Roadmap |
 
-✅ = a real payment has settled end-to-end on this rail.
+**Today's only real-money production rail is XRPL Mainnet.** Base Sepolia is testnet — agents can pay there using free Circle faucet USDC, useful for development but it isn't real revenue. To enable Base Mainnet (real USDC), fund the configured agent wallet with real USDC on Base, set `XRPL_NETWORK` / `chainId` env vars per `docs/DEPLOY.md`, and re-deploy.
+
+✅ = a real payment has settled end-to-end on this rail (real money OR testnet).
 ⚙️ = code is in the repo, just needs config / activation.
 🛣 = on the roadmap, not built yet.
 
@@ -169,7 +175,7 @@ bitbooth-gateway/
 
 ## What's built
 
-- **x402 V2 protocol** — challenge/response with nonce-based replay protection, on-chain settlement. **Verified end-to-end on live staging** (Base Sepolia USDC + XRPL mainnet XRP, 1-8s round-trip).
+- **x402 V2 protocol** — challenge/response with nonce-based replay protection, on-chain settlement. **Verified end-to-end on live staging** (XRPL mainnet XRP (real money) + Base Sepolia USDC (testnet, dev-only), 1-8s round-trip).
 - **Multi-chain routing** — single API, multiple rails advertised in each 402 challenge. Agent picks based on wallet balance.
 - **Agent-native endpoint** (`/v1/fetch`) — zero signup, zero API key, pure pay-per-call. Returns clean markdown.
 - **Multi-tenant SaaS** — self-service signup, API keys, per-route pricing, session-based client portal.

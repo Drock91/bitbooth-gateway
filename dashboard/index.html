@@ -1,0 +1,994 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>x402 — Autopilot Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      :root {
+        --bg: #0b0b1a;
+        --surface: #13132b;
+        --surface2: #1a1a3e;
+        --border: rgba(139, 92, 246, 0.12);
+        --border-hover: rgba(139, 92, 246, 0.3);
+        --text: #f0f0f8;
+        --text2: #a0a0c0;
+        --dim: #5a5a80;
+        --purple: #8b5cf6;
+        --purple-light: #a78bfa;
+        --purple-dark: #6d28d9;
+        --blue: #3b82f6;
+        --green: #22c55e;
+        --green-dim: rgba(34, 197, 94, 0.15);
+        --red: #ef4444;
+        --red-dim: rgba(239, 68, 68, 0.15);
+        --yellow: #eab308;
+        --yellow-dim: rgba(234, 179, 8, 0.15);
+        --grad-purple: linear-gradient(135deg, #7c3aed, #a78bfa);
+        --grad-blue: linear-gradient(135deg, #3b82f6, #818cf8);
+        --grad-green: linear-gradient(135deg, #059669, #22c55e);
+        --shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+        --shadow-purple: 0 4px 20px rgba(139, 92, 246, 0.15);
+      }
+      html,
+      body {
+        width: 100%;
+        max-width: 100vw;
+        overflow-x: hidden;
+      }
+      body {
+        font-family:
+          'Inter',
+          -apple-system,
+          BlinkMacSystemFont,
+          sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+      }
+      body::before {
+        content: '';
+        position: fixed;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background:
+          radial-gradient(ellipse at 30% 20%, rgba(124, 58, 237, 0.08) 0%, transparent 50%),
+          radial-gradient(ellipse at 70% 80%, rgba(59, 130, 246, 0.05) 0%, transparent 50%);
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      .header {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 32px;
+        border-bottom: 1px solid var(--border);
+        backdrop-filter: blur(20px);
+        background: rgba(11, 11, 26, 0.8);
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .brand-logo {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        background: var(--grad-purple);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 14px;
+        color: white;
+        box-shadow: var(--shadow-purple);
+      }
+      .brand h1 {
+        font-size: 20px;
+        font-weight: 700;
+        background: var(--grad-purple);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      .brand span {
+        font-size: 12px;
+        color: var(--dim);
+        font-weight: 400;
+        margin-left: 4px;
+      }
+      .header-right {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .status-pill {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+      }
+      .status-pill.running {
+        background: var(--green-dim);
+        color: var(--green);
+      }
+      .status-pill.paused {
+        background: var(--yellow-dim);
+        color: var(--yellow);
+      }
+      .status-pill.offline {
+        background: var(--red-dim);
+        color: var(--red);
+      }
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: currentColor;
+        animation: pulse 2s ease-in-out infinite;
+      }
+      .status-pill.paused .status-dot,
+      .status-pill.offline .status-dot {
+        animation: none;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 0.4;
+          transform: scale(0.85);
+        }
+      }
+
+      .main {
+        position: relative;
+        z-index: 1;
+        padding: 24px 32px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        max-width: 1440px;
+        margin: 0 auto;
+        width: 100%;
+        min-width: 0;
+      }
+
+      .metrics-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+      }
+      .metric-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 20px 24px;
+        transition: all 0.2s;
+        position: relative;
+        overflow: hidden;
+      }
+      .metric-card:hover {
+        border-color: var(--border-hover);
+        box-shadow: var(--shadow-purple);
+        transform: translateY(-1px);
+      }
+      .metric-card .label {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text2);
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .metric-card .value {
+        font-size: 32px;
+        font-weight: 800;
+        line-height: 1;
+      }
+      .metric-card .sub {
+        font-size: 11px;
+        color: var(--dim);
+        margin-top: 6px;
+      }
+      .metric-card.purple .value {
+        color: var(--purple-light);
+      }
+      .metric-card.green .value {
+        color: var(--green);
+      }
+      .metric-card.blue .value {
+        color: var(--blue);
+      }
+      .metric-card::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        filter: blur(40px);
+        opacity: 0.08;
+        pointer-events: none;
+      }
+      .metric-card.purple::after {
+        background: var(--purple);
+      }
+      .metric-card.green::after {
+        background: var(--green);
+      }
+      .metric-card.blue::after {
+        background: var(--blue);
+      }
+
+      .content-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 340px;
+        gap: 20px;
+        min-height: 500px;
+        min-width: 0;
+      }
+      .left-col {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        min-width: 0;
+      }
+
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        overflow: hidden;
+      }
+      .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+      .card-header h2 {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text);
+      }
+      .card-header .badge {
+        font-size: 11px;
+        font-weight: 600;
+        padding: 3px 10px;
+        border-radius: 12px;
+        background: rgba(139, 92, 246, 0.12);
+        color: var(--purple-light);
+      }
+
+      .goal-list {
+        flex: 1;
+        overflow-y: auto;
+        max-height: 320px;
+      }
+      .goal-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        margin-bottom: 4px;
+        transition: background 0.15s;
+        min-width: 0;
+      }
+      .goal-item:hover {
+        background: var(--surface2);
+      }
+      .goal-id {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--purple-light);
+        min-width: 48px;
+      }
+      .goal-pri {
+        font-size: 10px;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 6px;
+        min-width: 30px;
+        text-align: center;
+      }
+      .goal-pri.P0 {
+        background: var(--red-dim);
+        color: var(--red);
+      }
+      .goal-pri.P1 {
+        background: var(--yellow-dim);
+        color: var(--yellow);
+      }
+      .goal-pri.P2 {
+        background: rgba(90, 90, 128, 0.2);
+        color: var(--dim);
+      }
+      .goal-status {
+        font-size: 10px;
+        font-weight: 600;
+        padding: 2px 10px;
+        border-radius: 6px;
+        min-width: 72px;
+        text-align: center;
+      }
+      .goal-status.open {
+        background: rgba(139, 92, 246, 0.12);
+        color: var(--purple-light);
+      }
+      .goal-status.in_progress {
+        background: rgba(59, 130, 246, 0.15);
+        color: var(--blue);
+      }
+      .goal-status.done {
+        background: var(--green-dim);
+        color: var(--green);
+      }
+      .goal-status.blocked {
+        background: var(--red-dim);
+        color: var(--red);
+      }
+      .goal-title {
+        flex: 1 1 0;
+        min-width: 0;
+        font-size: 13px;
+        color: var(--text2);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .goal-id,
+      .goal-pri,
+      .goal-status {
+        flex: 0 0 auto;
+      }
+
+      .log-viewer {
+        flex: 1;
+        min-height: 200px;
+      }
+      .log-content {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+        font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+        font-size: 11px;
+        line-height: 1.7;
+        color: var(--dim);
+        white-space: pre-wrap;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        background: rgba(0, 0, 0, 0.25);
+        padding: 16px;
+        border-radius: 12px;
+        border: 1px solid rgba(139, 92, 246, 0.06);
+        max-height: 240px;
+        max-width: 100%;
+      }
+
+      .sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .control-section {
+        margin-bottom: 8px;
+      }
+      .control-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--dim);
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        margin-bottom: 10px;
+      }
+      .btn-group {
+        display: flex;
+        gap: 8px;
+      }
+      button {
+        font-family: 'Inter', sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.2s;
+        flex: 1;
+      }
+      button:active {
+        transform: scale(0.97);
+      }
+      .btn-primary {
+        background: var(--grad-purple);
+        color: white;
+        box-shadow: 0 2px 12px rgba(139, 92, 246, 0.3);
+      }
+      .btn-primary:hover {
+        box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4);
+      }
+      .btn-success {
+        background: var(--green-dim);
+        color: var(--green);
+        border: 1px solid rgba(34, 197, 94, 0.2);
+      }
+      .btn-success:hover {
+        background: rgba(34, 197, 94, 0.25);
+      }
+      .btn-danger {
+        background: var(--red-dim);
+        color: var(--red);
+        border: 1px solid rgba(239, 68, 68, 0.2);
+      }
+      .btn-danger:hover {
+        background: rgba(239, 68, 68, 0.25);
+      }
+      .btn-ghost {
+        background: var(--surface2);
+        color: var(--text2);
+        border: 1px solid var(--border);
+      }
+      .btn-ghost:hover {
+        border-color: var(--border-hover);
+        color: var(--text);
+      }
+
+      .add-form {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .form-row {
+        display: flex;
+        gap: 8px;
+      }
+      input,
+      select {
+        font-family: 'Inter', sans-serif;
+        font-size: 13px;
+        padding: 10px 14px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--bg);
+        color: var(--text);
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      input:focus,
+      select:focus {
+        border-color: var(--purple);
+      }
+      input[type='text'] {
+        width: 100%;
+      }
+      select {
+        width: auto;
+        min-width: 70px;
+      }
+      option {
+        background: var(--bg);
+      }
+
+      .effort-btn.active {
+        background: var(--grad-purple) !important;
+        color: white !important;
+        border: none !important;
+        box-shadow: 0 2px 12px rgba(139, 92, 246, 0.3);
+      }
+      .interval-control {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .interval-control input[type='range'] {
+        flex: 1;
+        -webkit-appearance: none;
+        appearance: none;
+        height: 6px;
+        border-radius: 3px;
+        background: var(--surface2);
+        outline: none;
+        border: none;
+        padding: 0;
+      }
+      .interval-control input[type='range']::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: var(--grad-purple);
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
+      }
+      .interval-value {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--purple-light);
+        min-width: 48px;
+        text-align: right;
+      }
+
+      .current-goal {
+        padding: 14px 16px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(59, 130, 246, 0.06));
+        border: 1px solid rgba(139, 92, 246, 0.15);
+        font-size: 13px;
+        color: var(--purple-light);
+        line-height: 1.5;
+        min-height: 48px;
+      }
+
+      .info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        font-size: 12px;
+      }
+      .info-row .info-label {
+        color: var(--dim);
+      }
+      .info-row .info-value {
+        color: var(--text2);
+        font-weight: 500;
+      }
+
+      ::-webkit-scrollbar {
+        width: 4px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--surface2);
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--purple-dark);
+      }
+
+      @media (max-width: 1100px) {
+        .content-grid {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .metrics-row {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .main {
+          padding: 16px;
+        }
+        .header {
+          padding: 16px;
+        }
+      }
+      @media (max-width: 640px) {
+        .metrics-row {
+          grid-template-columns: 1fr;
+        }
+        .metric-card .value {
+          font-size: 24px;
+        }
+        .main {
+          padding: 12px;
+        }
+        .card {
+          padding: 16px;
+        }
+        .goal-item {
+          flex-wrap: wrap;
+          gap: 6px;
+        }
+        .goal-title {
+          flex: 1 1 100%;
+          order: 3;
+        }
+        .btn-group {
+          flex-wrap: wrap;
+        }
+        button {
+          flex: 1 1 auto;
+          padding: 8px 14px;
+          font-size: 12px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div class="brand">
+        <div class="brand-logo">402</div>
+        <div>
+          <h1>x402 <span>autopilot</span></h1>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="status-pill running" id="statusPill">
+          <div class="status-dot"></div>
+          <span id="statusText">connecting</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="metrics-row">
+        <div class="metric-card purple">
+          <div class="label">Goals Completed</div>
+          <div class="value" id="v-done">--</div>
+          <div class="sub">
+            <span id="v-open">-</span> open &middot; <span id="v-blocked">0</span> blocked
+          </div>
+        </div>
+        <div class="metric-card green">
+          <div class="label">Test Coverage</div>
+          <div class="value" id="v-coverage">--</div>
+          <div class="sub">
+            <span id="v-tests">-</span> tests across <span id="v-files">-</span> files
+          </div>
+        </div>
+        <div class="metric-card blue">
+          <div class="label">Sessions</div>
+          <div class="value" id="v-session">--</div>
+          <div class="sub">
+            Tick <span id="v-tick">-</span> &middot; <span id="v-lint">0</span> lint warnings
+          </div>
+        </div>
+        <div class="metric-card purple">
+          <div class="label">Bundle Size</div>
+          <div class="value" id="v-bundle">--</div>
+          <div class="sub">KB &middot; esbuild</div>
+        </div>
+      </div>
+
+      <div class="content-grid">
+        <div class="left-col">
+          <div class="card">
+            <div class="card-header">
+              <h2>Goal Backlog</h2>
+              <div class="badge" id="goalBadge">0 open</div>
+            </div>
+            <div class="goal-list" id="goalList">
+              <div style="color: var(--dim); font-size: 13px; padding: 20px 0; text-align: center">
+                Connecting...
+              </div>
+            </div>
+          </div>
+
+          <div class="card log-viewer">
+            <div class="card-header">
+              <h2>Tick Log</h2>
+              <button
+                class="btn-ghost"
+                style="flex: 0; padding: 6px 12px; font-size: 11px"
+                onclick="refreshLogs()"
+              >
+                Refresh
+              </button>
+            </div>
+            <div class="log-content" id="logContent">Waiting for data...</div>
+          </div>
+        </div>
+
+        <div class="sidebar">
+          <div class="card">
+            <div class="card-header"><h2>Controls</h2></div>
+
+            <div class="control-section">
+              <div class="control-label">Playback</div>
+              <div class="btn-group">
+                <button class="btn-success" onclick="resume()">Resume</button>
+                <button class="btn-danger" onclick="pause()">Pause</button>
+              </div>
+            </div>
+
+            <div class="control-section">
+              <div class="control-label">Tick Interval</div>
+              <div class="interval-control">
+                <input
+                  type="range"
+                  id="intervalSlider"
+                  min="5"
+                  max="60"
+                  step="5"
+                  value="10"
+                  oninput="updateIntervalLabel()"
+                  onchange="setInterval_()"
+                />
+                <span class="interval-value" id="intervalValue">10m</span>
+              </div>
+            </div>
+
+            <div class="control-section">
+              <div class="control-label">Model</div>
+              <div class="form-row">
+                <select id="modelSelect" style="flex: 1" onchange="setModel()">
+                  <option value="claude-opus-4-6">Opus 4.6</option>
+                  <option value="claude-sonnet-4-6">Sonnet 4.6</option>
+                  <option value="claude-haiku-4-5-20251001">Haiku 4.5</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="control-section">
+              <div class="control-label">Effort</div>
+              <div class="btn-group">
+                <button class="btn-ghost effort-btn" data-effort="low" onclick="setEffort('low')">
+                  Low
+                </button>
+                <button
+                  class="btn-ghost effort-btn active"
+                  data-effort="high"
+                  onclick="setEffort('high')"
+                >
+                  High
+                </button>
+                <button class="btn-primary effort-btn" data-effort="max" onclick="setEffort('max')">
+                  Max
+                </button>
+              </div>
+            </div>
+
+            <div class="control-section">
+              <div class="control-label">Current Goal</div>
+              <div class="current-goal" id="currentGoal">Waiting for next tick...</div>
+            </div>
+
+            <div class="control-section">
+              <div class="control-label">Add Goal</div>
+              <div class="add-form">
+                <div class="form-row">
+                  <select id="goalPri">
+                    <option value="P0">P0</option>
+                    <option value="P1" selected>P1</option>
+                    <option value="P2">P2</option>
+                  </select>
+                  <select id="goalEst">
+                    <option value="15m">15m</option>
+                    <option value="30m" selected>30m</option>
+                    <option value="45m">45m</option>
+                    <option value="60m">60m</option>
+                  </select>
+                </div>
+                <input
+                  type="text"
+                  id="goalTitle"
+                  placeholder="Describe the goal..."
+                  onkeydown="if (event.key === 'Enter') addGoal();"
+                />
+                <button class="btn-primary" onclick="addGoal()">Add to Backlog</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><h2>Session Info</h2></div>
+            <div class="info-row">
+              <span class="info-label">Last Updated</span>
+              <span class="info-value" id="lastUpdated">--</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Branch</span>
+              <span class="info-value">autopilot</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Model</span>
+              <span class="info-value" id="infoModel">opus-4-6</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Interval</span>
+              <span class="info-value" id="infoInterval">10 min</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Streak</span>
+              <span class="info-value" id="v-streak">--</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const API = '';
+      let evtSource;
+
+      function connect() {
+        evtSource = new EventSource(`${API}/api/events`);
+        const pill = document.getElementById('statusPill');
+        const txt = document.getElementById('statusText');
+
+        evtSource.addEventListener('connected', () => {
+          pill.className = 'status-pill running';
+          txt.textContent = 'running';
+        });
+
+        evtSource.addEventListener('state', (e) => {
+          const s = JSON.parse(e.data);
+          document.getElementById('v-session').textContent = s.sessionCount ?? '--';
+          document.getElementById('v-done').textContent = s.doneGoals ?? '--';
+          document.getElementById('v-open').textContent = s.openGoals ?? '-';
+          document.getElementById('v-blocked').textContent = s.blockedGoals ?? '0';
+          document.getElementById('v-tests').textContent = (s.testCount ?? 0).toLocaleString();
+          document.getElementById('v-files').textContent = s.testFileCount ?? '-';
+          document.getElementById('v-coverage').textContent =
+            s.coveragePct != null ? s.coveragePct.toFixed(1) + '%' : '--';
+          document.getElementById('v-lint').textContent = s.lintWarnings ?? '0';
+          document.getElementById('v-bundle').textContent = s.bundleSizeKb ?? '--';
+          document.getElementById('v-tick').textContent =
+            s.lastSessionTag?.replace('tick-', '') ?? '-';
+          document.getElementById('v-streak').textContent = s.streakDays
+            ? s.streakDays + ' day(s)'
+            : '--';
+          document.getElementById('lastUpdated').textContent = s.updatedAt
+            ? new Date(s.updatedAt).toLocaleTimeString()
+            : '--';
+        });
+
+        evtSource.addEventListener('goals', (e) => {
+          renderGoals(JSON.parse(e.data));
+        });
+        evtSource.addEventListener('pause', (e) => {
+          const { paused } = JSON.parse(e.data);
+          pill.className = paused ? 'status-pill paused' : 'status-pill running';
+          txt.textContent = paused ? 'paused' : 'running';
+        });
+        evtSource.onerror = () => {
+          pill.className = 'status-pill offline';
+          txt.textContent = 'disconnected';
+          evtSource.close();
+          setTimeout(connect, 5000);
+        };
+      }
+
+      function renderGoals(goals) {
+        const list = document.getElementById('goalList');
+        const badge = document.getElementById('goalBadge');
+        const current = document.getElementById('currentGoal');
+        const open = goals.filter((g) => g.status === 'open' || g.status === 'in_progress');
+        const inProg = goals.find((g) => g.status === 'in_progress');
+        badge.textContent = `${open.length} open`;
+        current.textContent = inProg ? `${inProg.id}: ${inProg.title}` : 'Waiting for next tick...';
+        if (open.length === 0) {
+          list.innerHTML =
+            '<div style="color:var(--dim);font-size:13px;padding:20px 0;text-align:center;">Backlog empty — replenishment will trigger</div>';
+          return;
+        }
+        list.innerHTML = open
+          .map(
+            (g) => `
+    <div class="goal-item">
+      <span class="goal-id">${g.id}</span>
+      <span class="goal-pri ${g.priority}">${g.priority}</span>
+      <span class="goal-status ${g.status}">${g.status.replace('_', ' ')}</span>
+      <span class="goal-title" title="${g.title}">${g.title}</span>
+    </div>
+  `,
+          )
+          .join('');
+      }
+
+      async function pause() {
+        await fetch(`${API}/api/pause`, { method: 'POST' });
+      }
+      async function resume() {
+        await fetch(`${API}/api/resume`, { method: 'POST' });
+      }
+
+      function updateIntervalLabel() {
+        document.getElementById('intervalValue').textContent =
+          document.getElementById('intervalSlider').value + 'm';
+      }
+      async function setInterval_() {
+        const minutes = document.getElementById('intervalSlider').value;
+        await fetch(`${API}/api/interval`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ minutes: Number(minutes) }),
+        });
+        document.getElementById('infoInterval').textContent = minutes + ' min';
+      }
+      async function setModel() {
+        const model = document.getElementById('modelSelect').value;
+        await fetch(`${API}/api/model`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model }),
+        });
+        document.getElementById('infoModel').textContent = model
+          .replace('claude-', '')
+          .replace('-20251001', '');
+      }
+      async function setEffort(level) {
+        document.querySelectorAll('.effort-btn').forEach((b) => b.classList.remove('active'));
+        document.querySelector(`.effort-btn[data-effort="${level}"]`).classList.add('active');
+        await fetch(`${API}/api/effort`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ effort: level }),
+        });
+      }
+      async function loadSettings() {
+        try {
+          const [intRes, modelRes, effortRes] = await Promise.all([
+            fetch(`${API}/api/interval`).then((r) => r.json()),
+            fetch(`${API}/api/model`).then((r) => r.json()),
+            fetch(`${API}/api/effort`).then((r) => r.json()),
+          ]);
+          if (intRes.minutes) {
+            document.getElementById('intervalSlider').value = intRes.minutes;
+            document.getElementById('intervalValue').textContent = intRes.minutes + 'm';
+            document.getElementById('infoInterval').textContent = intRes.minutes + ' min';
+          }
+          if (modelRes.model) {
+            document.getElementById('modelSelect').value = modelRes.model;
+            document.getElementById('infoModel').textContent = modelRes.model
+              .replace('claude-', '')
+              .replace('-20251001', '');
+          }
+          if (effortRes.effort) {
+            document.querySelectorAll('.effort-btn').forEach((b) => b.classList.remove('active'));
+            const btn = document.querySelector(`.effort-btn[data-effort="${effortRes.effort}"]`);
+            if (btn) btn.classList.add('active');
+          }
+        } catch {
+          /* settings not saved yet */
+        }
+      }
+      async function addGoal() {
+        const title = document.getElementById('goalTitle').value.trim();
+        if (!title) return;
+        await fetch(`${API}/api/goals`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            priority: document.getElementById('goalPri').value,
+            estimate: document.getElementById('goalEst').value,
+            title,
+          }),
+        });
+        document.getElementById('goalTitle').value = '';
+      }
+      async function refreshLogs() {
+        const res = await fetch(`${API}/api/logs`);
+        const text = await res.text();
+        const el = document.getElementById('logContent');
+        el.textContent = text.slice(-4000);
+        el.scrollTop = el.scrollHeight;
+      }
+
+      connect();
+      refreshLogs();
+      loadSettings();
+      setInterval(refreshLogs, 12000);
+    </script>
+  </body>
+</html>

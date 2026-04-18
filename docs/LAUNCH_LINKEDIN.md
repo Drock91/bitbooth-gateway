@@ -1,6 +1,39 @@
-# LinkedIn Launch Post — BitBooth
+# LinkedIn Launch Post — BitBooth (demo + roadmap framing)
 
-Three versions. Pick one, post tonight. All claims verified end-to-end on staging.
+**Strategic framing:** ship as reference implementation now, build real moat (JS rendering) over next 2 weeks. Don't oversell — the demo is functionally equivalent to the free `@modelcontextprotocol/server-fetch` today. The pitch is the protocol shipping + the roadmap, not "look at this superior product."
+
+Three versions below. **Recommend Version 4 (the demo-honest one).** All claims verified end-to-end on staging.
+
+---
+
+## Version 4 — Demo + roadmap (RECOMMENDED — replaces older versions)
+
+> Shipped: the first working x402 MCP server.
+>
+> ```
+> npm install @bitbooth/mcp-fetch
+> ```
+>
+> Verified end-to-end this afternoon — agent wallet pays 0.005 XRP on XRPL Mainnet (real money) — or 0.005 USDC on Base Sepolia (free testnet) for development, gateway returns the URL as clean markdown, full round-trip in 1.3 seconds.
+>
+> Honest framing: **the fetch logic itself is no better than the free `@modelcontextprotocol/server-fetch`** today. So why ship it? Because x402 (Coinbase + Linux Foundation, 2025) is the cleanest agent-payment spec I've seen, and nobody had a working production MCP implementation of it. Now they do — and it's MIT, single-file, copy-pasteable.
+>
+> The next 2 weeks turn the demo into a real product:
+> – JS rendering via Playwright (works on SPAs that `server-fetch` can't crawl)
+> – Better markdown via Readability + Turndown (cleaner output for LLMs)
+> – Shared cache so multiple agents hitting the same URL split the payment
+> – Marketplace where third-party API publishers list their own paid endpoints
+>
+> If you build agent tooling — DM me. First 10 builders to try it get a free 1k-call mainnet trial.
+>
+> Live demo + admin earnings dashboard:  heinrichstech.com/bitbooth.html
+> Source + roadmap: github.com/Drock91/bitbooth-gateway
+>
+> #x402 #AI #Agents #MCP #XRPL #Base
+
+**Length:** ~225 words. Honest about today, exciting about tomorrow.
+
+---
 
 ---
 
