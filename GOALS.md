@@ -32,6 +32,12 @@
 | G-040 | P3 | open | 600m | Marketplace MVP for third-party API publishers |
 | G-041 | P3 | open | 240m | Native XRPL signing in @bitbooth/mcp-fetch |
 | G-042 | P3 | open | 240m | Lightning Network (L402) adapter |
+| G-050 | P1 | open | 480m | Ship @bitbooth/mcp-youtube — paid YouTube transcript MCP |
+| G-051 | P1 | open | 720m | Ship @bitbooth/mcp-pdf — paid PDF→markdown w/ tables |
+| G-052 | P2 | open | 480m | Ship @bitbooth/mcp-search — paid web search (Brave proxy) |
+| G-053 | P2 | open | 480m | Ship @bitbooth/mcp-onchain — multi-chain wallet/tx queries |
+| G-054 | P2 | open | 480m | Ship @bitbooth/mcp-ocr — image URL → extracted text |
+| G-055 | P3 | open | 480m | Ship @bitbooth/mcp-transcribe — audio/video → text (Whisper) |
 
 ---
 
@@ -214,3 +220,88 @@ If the autopilot completes a goal:
 - Move status to `done`.
 - Add a CHANGELOG entry referencing the goal ID.
 - If the work spawned follow-up tasks, add them as new goals.
+
+---
+
+## Microservices roadmap (G-050 to G-059)
+
+These are **separate paid MCP servers** that share BitBooth's x402 gateway as the payment+auth layer. Each ships as its own npm package under `@bitbooth/`. Backend endpoints live in this repo (e.g. `POST /v1/youtube`, `POST /v1/pdf`); the npm packages are thin MCP wrappers that wire the agent's wallet to the right backend route.
+
+**Why this architecture:** one gateway = one set of admin/billing/observability/tenancy. Many tools = many monetization surfaces, each with its own moat.
+
+### G-050 — @bitbooth/mcp-youtube — paid YouTube transcript MCP
+**Priority:** P1
+**Why:** Claude (and most LLMs) can't watch videos. Agents that summarize/QA video content desperately need transcripts. `youtube-transcript` libraries exist but break monthly when YouTube updates anti-scraping. A maintained service is real utility.
+**Acceptance:**
+- New endpoint `POST /v1/youtube` accepting `{ url: <youtube URL>, lang?: 'en' }`
+- Returns `{ transcript: [{start, dur, text}, ...], title, duration }`
+- Backend uses `youtube-transcript-api` (Python) via Lambda or `youtube-dl-exec` (Node)
+- Pricing: 0.01 USDC per transcript (~2× fetch price; longer videos = more compute)
+- New npm package `@bitbooth/mcp-youtube` exposing `youtube_transcript(url)` MCP tool
+- Tested against 5 video URLs (long form, music, podcast, tutorial, multi-language)
+
+### G-051 — @bitbooth/mcp-pdf — paid PDF→markdown with table extraction
+**Priority:** P1
+**Why:** Agents handle PDFs poorly today — Claude treats them as images (lossy), tables get garbled. A real PDF→structured-markdown service with table extraction is genuinely valuable. Used by every research/legal/finance agent.
+**Acceptance:**
+- New endpoint `POST /v1/pdf` accepting `{ url: <pdf URL>, mode?: 'text' | 'structured' }`
+- Returns `{ markdown, pageCount, tables: [...], metadata: {...} }`
+- Backend uses Docling (IBM, MIT) or Unstructured.io's open-source library, run in a separate render-Lambda (PDF parsing is CPU-heavy)
+- Pricing: 0.02 USDC per PDF base + 0.005/page above 10
+- New npm package `@bitbooth/mcp-pdf` exposing `pdf_to_markdown(url)` MCP tool
+- Tested against 5 PDFs: arxiv paper, financial 10-K, scanned doc (OCR fallback), legal contract, presentation slides
+
+### G-052 — @bitbooth/mcp-search — paid web search (Brave proxy)
+**Priority:** P2
+**Why:** Every agent needs web search. Brave Search API is the cleanest commercial option (~$3/1k queries, no Google ToS issues, decent quality). Wrapping it = let agents pay per search without setting up their own Brave account.
+**Acceptance:**
+- New endpoint `POST /v1/search` accepting `{ query, count?: 10, freshness?: 'd'|'w'|'m'|'y' }`
+- Returns `{ results: [{title, url, description, age}, ...], total }`
+- Backend wraps Brave Search API with our key, charges agent 0.01 USDC/query
+- Margin: ~67% (we pay $0.003 to Brave, charge $0.01)
+- New npm package `@bitbooth/mcp-search` exposing `web_search(query)` tool
+- Add Brave API key as Secrets Manager entry; user provides
+
+### G-053 — @bitbooth/mcp-onchain — multi-chain wallet/tx queries
+**Priority:** P2
+**Why:** Crypto-native agents (the x402 audience) constantly need to read on-chain state — wallet balances, recent txs, NFT ownership across 10+ chains. Alchemy/Moralis charge ~$50/mo minimum; per-call pricing via x402 hits a different sweet spot.
+**Acceptance:**
+- New endpoints:
+  - `POST /v1/onchain/balance` `{ address, chains?: ['ethereum','base','xrpl',...] }` → balance per chain
+  - `POST /v1/onchain/txs` `{ address, chain, limit?: 25 }` → recent txs
+  - `POST /v1/onchain/nfts` `{ address, chain }` → NFT holdings
+- Backend uses Alchemy SDK across chains
+- Pricing: 0.005 USDC per query
+- New npm package `@bitbooth/mcp-onchain` exposing 3 MCP tools
+
+### G-054 — @bitbooth/mcp-ocr — image URL → extracted text
+**Priority:** P2
+**Why:** Claude's vision is good for clean printed text but struggles with handwriting, dense forms, multi-language, low-quality scans. Google Cloud Vision or AWS Textract handle these better. Wrap one, charge per image.
+**Acceptance:**
+- New endpoint `POST /v1/ocr` accepting `{ url: <image URL>, lang?: 'auto' }`
+- Returns `{ text, confidence, boundingBoxes?: [...] }`
+- Backend uses AWS Textract (already in our stack) or Google Cloud Vision
+- Pricing: 0.02 USDC per image
+- New npm package `@bitbooth/mcp-ocr` exposing `image_to_text(url)` tool
+
+### G-055 — @bitbooth/mcp-transcribe — audio/video → text via Whisper
+**Priority:** P3
+**Why:** Agents can't process audio. Whisper API or self-hosted whisper.cpp wrapped via x402 = pay-per-minute transcription with no setup.
+**Acceptance:**
+- New endpoint `POST /v1/transcribe` accepting `{ url: <audio/video URL>, lang?: 'auto' }`
+- Returns `{ transcript, segments: [{start, end, text}, ...], duration }`
+- Backend uses OpenAI Whisper API ($0.006/min) or self-hosted whisper.cpp on Lambda (free but heavier)
+- Pricing: 0.05 USDC per minute of audio (charges round up; 8× our cost via Whisper API for margin)
+- New npm package `@bitbooth/mcp-transcribe` exposing `transcribe(url)` tool
+
+### Why these 6 and not others
+
+**Cut from list:**
+- ❌ mcp-translate — Anthropic + Google free tier handles 99% of needs
+- ❌ mcp-weather, mcp-geocode, mcp-stock — too many free APIs, no margin
+- ❌ mcp-image-gen — DALL-E/Flux is $0.04-0.08/image; agent would pay $0.10-0.20, not great unit economics
+- ❌ mcp-email/sms — abuse vectors (bot spam), agents can wire Twilio direct
+- ❌ mcp-publish (post to Twitter/LinkedIn) — ToS violations, agent-account bans
+- ❌ mcp-screenshot — niche; if needed, fold into mcp-render
+
+The 6 above all share: **real capability gap that LLMs can't trivially fill, paid upstream API exists, clean per-call pricing, no abuse surface.**

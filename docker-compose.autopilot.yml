@@ -56,9 +56,11 @@ services:
       # Flip to 'true' once a GH_TOKEN is mounted/exported in the container.
       GH_AUTOPILOT_ISSUES: 'false'
     volumes:
-      # The repo itself.
+      # The repo itself — sibling worktree so the container's git HEAD
+      # doesn't collide with the user's interactive HEAD on the main clone.
+      # Set up via: git worktree add ../bitbooth-autopilot x402-api-gateway
       - type: bind
-        source: .
+        source: ${HOME}/Desktop/bitbooth-autopilot
         target: /workspace
       # Claude Code host credentials.
       #
@@ -119,8 +121,10 @@ services:
       WORKSPACE: '/workspace'
       DASHBOARD_PORT: '4020'
     volumes:
+      # Bind to the autopilot worktree so the dashboard sees the same
+      # GOALS.md / .agent/state.json that the autopilot writes to.
       - type: bind
-        source: .
+        source: ${HOME}/Desktop/bitbooth-autopilot
         target: /workspace
     ports:
       - '4020:4020'
