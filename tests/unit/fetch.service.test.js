@@ -1,9 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockFetchWithTimeout = vi.hoisted(() => vi.fn());
+const mockRenderPage = vi.hoisted(() => vi.fn());
 
 vi.mock('../../src/lib/http.js', () => ({
   fetchWithTimeout: mockFetchWithTimeout,
+}));
+
+vi.mock('../../src/services/render.service.js', () => ({
+  renderService: { renderPage: mockRenderPage, closeBrowser: vi.fn() },
 }));
 
 import { fetchService } from '../../src/services/fetch.service.js';
@@ -324,6 +329,130 @@ describe('fetchService', () => {
 
       const expected = new TextEncoder().encode(body).length;
       expect(result.metadata.contentLength).toBe(expected);
+    });
+  });
+
+  describe('fetch — render mode', () => {
+    it('delegates to renderService.renderPage', async () => {
+      mockRenderPage.mockResolvedValue({
+        html: '<html><body><h1>SPA Content</h1><p>Dynamic data loaded via JS.</p></body></html>',
+        title: 'SPA Dashboard',
+        contentLength: 100,
+        truncated: false,
+      });
+
+      const result = await fetchService.fetch({
+        url: 'https://spa.example.com',
+        mode: 'render',
+      });
+
+      expect(mockRenderPage).toHaveBeenCalledWith('https://spa.example.com');
+      expect(result.markdown).toContain('SPA Content');
+      expect(result.title).toBe('SPA Dashboard');
+      expect(result.metadata.url).toBe('https://spa.example.com');
+      expect(result.metadata.truncated).toBe(false);
+    });
+
+    it('does not call fetchWithTimeout in render mode', async () => {
+      mockRenderPage.mockResolvedValue({
+        html: '<html><body>ok</body></html>',
+        title: '',
+        contentLength: 30,
+        truncated: false,
+      });
+
+      await fetchService.fetch({ url: 'https://spa.com', mode: 'render' });
+
+      expect(mockFetchWithTimeout).not.toHaveBeenCalled();
+    });
+
+    it('extracts article from rendered HTML via Readability', async () => {
+      const richHtml = `<html><head><title>T</title></head><body>
+        <article><h1>Deep Render</h1>
+        <p>This is substantial article content that Readability should extract.
+        It has enough text to be recognized as the main content block.
+        Additional paragraphs help the algorithm identify this as an article.</p>
+        <p>Second paragraph with more content to meet the Readability threshold.</p>
+        </article></body></html>`;
+      mockRenderPage.mockResolvedValue({
+        html: richHtml,
+        title: 'Page Title',
+        contentLength: Buffer.byteLength(richHtml),
+        truncated: false,
+      });
+
+      const result = await fetchService.fetch({
+        url: 'https://rich.com',
+        mode: 'render',
+      });
+
+      expect(result.markdown).toContain('Deep Render');
+    });
+
+    it('prefers rendered page title over article title', async () => {
+      mockRenderPage.mockResolvedValue({
+        html: '<html><body><p>text</p></body></html>',
+        title: 'Rendered Title',
+        contentLength: 40,
+        truncated: false,
+      });
+
+      const result = await fetchService.fetch({
+        url: 'https://x.com',
+        mode: 'render',
+      });
+
+      expect(result.title).toBe('Rendered Title');
+    });
+
+    it('falls back to article title when page title is empty', async () => {
+      const html = `<html><head><title>Article T</title></head><body>
+        <article><h1>Article T</h1>
+        <p>Enough content for Readability to extract this as a real article.
+        Multiple sentences needed for the algorithm to work properly here.</p>
+        <p>Another paragraph to help readability detection.</p>
+        </article></body></html>`;
+      mockRenderPage.mockResolvedValue({
+        html,
+        title: '',
+        contentLength: Buffer.byteLength(html),
+        truncated: false,
+      });
+
+      const result = await fetchService.fetch({
+        url: 'https://x.com',
+        mode: 'render',
+      });
+
+      // Falls back to article.title when rendered.title is empty
+      expect(result.title).toBeTruthy();
+    });
+
+    it('propagates UpstreamError from renderService', async () => {
+      mockRenderPage.mockRejectedValue(
+        new UpstreamError('playwright', { reason: 'timeout', url: 'https://slow.com' }),
+      );
+
+      await expect(fetchService.fetch({ url: 'https://slow.com', mode: 'render' })).rejects.toThrow(
+        UpstreamError,
+      );
+    });
+
+    it('passes truncated flag from renderService', async () => {
+      mockRenderPage.mockResolvedValue({
+        html: '<html><body>big</body></html>',
+        title: '',
+        contentLength: 3 * 1024 * 1024,
+        truncated: true,
+      });
+
+      const result = await fetchService.fetch({
+        url: 'https://big.com',
+        mode: 'render',
+      });
+
+      expect(result.metadata.truncated).toBe(true);
+      expect(result.metadata.contentLength).toBe(3 * 1024 * 1024);
     });
   });
 

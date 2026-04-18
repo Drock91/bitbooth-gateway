@@ -219,6 +219,36 @@ describe('postFetch', () => {
       expect(res.statusCode).toBe(200);
     });
 
+    it('charges 4× for render mode ($0.02 USDC)', async () => {
+      mockFetch.mockResolvedValueOnce(fakeFetchResult);
+      await postFetch(makeEvent({ url: 'https://spa.com', mode: 'render' }));
+      expect(mockEnforceX402).toHaveBeenCalledWith(
+        expect.objectContaining({
+          route: expect.objectContaining({ amountWei: '20000' }),
+        }),
+      );
+    });
+
+    it('charges standard price for fast mode', async () => {
+      mockFetch.mockResolvedValueOnce(fakeFetchResult);
+      await postFetch(makeEvent({ url: 'https://example.com', mode: 'fast' }));
+      expect(mockEnforceX402).toHaveBeenCalledWith(
+        expect.objectContaining({
+          route: expect.objectContaining({ amountWei: '5000' }),
+        }),
+      );
+    });
+
+    it('charges standard price for full mode', async () => {
+      mockFetch.mockResolvedValueOnce(fakeFetchResult);
+      await postFetch(makeEvent({ url: 'https://example.com', mode: 'full' }));
+      expect(mockEnforceX402).toHaveBeenCalledWith(
+        expect.objectContaining({
+          route: expect.objectContaining({ amountWei: '5000' }),
+        }),
+      );
+    });
+
     it('enforces rate-limit BEFORE x402 (cheap check first)', async () => {
       const order = [];
       mockEnforceRateLimit.mockImplementationOnce(async () => {

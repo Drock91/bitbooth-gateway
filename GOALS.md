@@ -42,7 +42,7 @@ Revenue math:
 | G-002 | P0 | done | 60m | Reframe README + mcp-fetch + LinkedIn as honest demo |
 | G-003 | P0 | blocked | 5m | Smoke-test npm v1.0.1 install (needs user `npm publish` 2FA) |
 | G-004 | P0 | done | 90m | Build /docs/agents agent-onboarding page |
-| G-010 | P1 | open | 240m | mode:render via Playwright (JS rendering — the real moat) |
+| G-010 | P1 | in_progress | 240m | mode:render via Playwright (JS rendering — the real moat) |
 | G-011 | P1 | done | 60m | Replace naive html→md with Readability+Turndown |
 | G-012 | P1 | open | 180m | DDB-backed shared cache (multiple agents share one fetch) |
 | G-013 | P1 | open | 240m | Per-tenant rate-limit pooling — make plan tiers matter |
@@ -113,7 +113,7 @@ Each goal below has full acceptance contract — what the autopilot uses to know
 ## P1 — Build the moat (next 7-14 days, the JS rendering thesis)
 
 ### G-010 — Add `mode: "render"` that uses Playwright for JS-rendered pages
-**Status:** pending
+**Status:** in_progress (render service, schema, controller, tests done; remaining: Lambda layer packaging, end-to-end SPA validation)
 **Why:** the differentiator over `@modelcontextprotocol/server-fetch`. Lets agents fetch SPAs (React/Vue/Angular dashboards) that naive HTTP fetch can't crawl.
 **Acceptance:**
 - New `mode: "render"` flag in `/v1/fetch` schema

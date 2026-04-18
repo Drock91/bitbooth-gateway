@@ -3,6 +3,7 @@ import { Readability } from '@mozilla/readability';
 import TurndownService from 'turndown';
 import { fetchWithTimeout } from '../lib/http.js';
 import { UpstreamError, ValidationError } from '../lib/errors.js';
+import { renderService } from './render.service.js';
 
 const MAX_BODY_BYTES = Number(process.env.FETCH_MAX_BODY_BYTES) || 2 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = Number(process.env.FETCH_TIMEOUT_MS) || 10_000;
@@ -62,36 +63,57 @@ function extractArticle(html, url) {
   return { title: article.title || '', content: article.content };
 }
 
+async function fetchHtml(url) {
+  let res;
+  try {
+    res = await fetchWithTimeout(url, {
+      timeoutMs: FETCH_TIMEOUT_MS,
+      retry: { retries: 0 },
+      headers: {
+        'User-Agent': 'BitBooth-Fetch/1.0',
+        Accept: 'text/html, application/xhtml+xml',
+      },
+    });
+  } catch (err) {
+    throw new UpstreamError('fetch', { reason: err.message, url });
+  }
+
+  if (!res.ok) {
+    throw new UpstreamError('fetch', {
+      reason: `HTTP ${res.status}`,
+      url,
+      status: res.status,
+    });
+  }
+
+  const ct = (res.headers.get('content-type') || '').toLowerCase();
+  if (!ct.includes('text/html') && !ct.includes('application/xhtml+xml')) {
+    throw new ValidationError([{ path: ['url'], message: `Non-HTML content-type: ${ct}` }]);
+  }
+
+  return readBody(res);
+}
+
 export const fetchService = {
   async fetch({ url, mode }) {
-    let res;
-    try {
-      res = await fetchWithTimeout(url, {
-        timeoutMs: FETCH_TIMEOUT_MS,
-        retry: { retries: 0 },
-        headers: {
-          'User-Agent': 'BitBooth-Fetch/1.0',
-          Accept: 'text/html, application/xhtml+xml',
+    if (mode === 'render') {
+      const rendered = await renderService.renderPage(url);
+      const article = extractArticle(rendered.html, url);
+      const td = buildTurndown();
+      const markdown = td.turndown(article.content);
+      return {
+        title: rendered.title || article.title,
+        markdown,
+        metadata: {
+          url,
+          fetchedAt: new Date().toISOString(),
+          contentLength: rendered.contentLength,
+          truncated: rendered.truncated,
         },
-      });
-    } catch (err) {
-      throw new UpstreamError('fetch', { reason: err.message, url });
+      };
     }
 
-    if (!res.ok) {
-      throw new UpstreamError('fetch', {
-        reason: `HTTP ${res.status}`,
-        url,
-        status: res.status,
-      });
-    }
-
-    const ct = (res.headers.get('content-type') || '').toLowerCase();
-    if (!ct.includes('text/html') && !ct.includes('application/xhtml+xml')) {
-      throw new ValidationError([{ path: ['url'], message: `Non-HTML content-type: ${ct}` }]);
-    }
-
-    const { html, contentLength, truncated } = await readBody(res);
+    const { html, contentLength, truncated } = await fetchHtml(url);
 
     let title, markdown;
     if (mode === 'fast') {

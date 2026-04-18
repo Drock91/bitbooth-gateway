@@ -7,19 +7,17 @@ import { enforceRateLimit, rateLimitHeaders } from '../middleware/rate-limit.mid
 import { enforceX402 } from '../middleware/x402.middleware.js';
 import { UnauthorizedError } from '../lib/errors.js';
 
-/**
- * Fixed route config for /v1/fetch. Payment-per-call is the entire auth model:
- * no API key required, no tenant signup, just pay via x402 and get markdown.
- * This is the flagship agent-native endpoint — `npm install @bitbooth/mcp-fetch`
- * and go. Other endpoints (/v1/resource, /v1/fetch/bulk) still require API keys
- * + tenant signup; /v1/fetch is intentionally permissionless.
- */
-const FETCH_ROUTE = {
-  resource: '/v1/fetch',
-  amountWei: process.env.FETCH_PRICE_WEI || '5000', // 0.005 USDC (6 decimals)
-  assetSymbol: 'USDC',
-  fraudRules: undefined,
-};
+const FETCH_PRICE_WEI = process.env.FETCH_PRICE_WEI || '5000'; // 0.005 USDC
+const RENDER_PRICE_WEI = process.env.RENDER_PRICE_WEI || '20000'; // 0.02 USDC
+
+function fetchRoute(mode) {
+  return {
+    resource: '/v1/fetch',
+    amountWei: mode === 'render' ? RENDER_PRICE_WEI : FETCH_PRICE_WEI,
+    assetSymbol: 'USDC',
+    fraudRules: undefined,
+  };
+}
 
 export async function postFetch(event) {
   const headers = normalize(event.headers);
@@ -42,11 +40,12 @@ export async function postFetch(event) {
 
   const rlInfo = await enforceRateLimit(accountId, plan);
 
-  // x402 challenge + verify. Throws 402 with accepts[] if no X-PAYMENT
-  // header; throws 402 with a reason if the payment is invalid.
-  await enforceX402({ headers, accountId, route: FETCH_ROUTE });
-
+  // Parse body early so we know the mode before issuing an x402 challenge.
+  // render mode costs 4× more than fast/full.
   const input = parseBody(FetchRequest, event.body);
+
+  await enforceX402({ headers, accountId, route: fetchRoute(input.mode) });
+
   const result = await fetchService.fetch(input);
 
   const resp = jsonResponse(200, result);

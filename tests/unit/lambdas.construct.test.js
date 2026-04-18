@@ -177,10 +177,10 @@ describe('Lambdas construct — memory and timeout', () => {
     expect(fn.Timeout).toBe(10);
   });
 
-  it('fetchFn has 512 MB memory and 15s timeout', () => {
+  it('fetchFn has 2048 MB memory and 30s timeout for Playwright rendering', () => {
     const fn = findFnByName(template, 'x402-fetch-');
-    expect(fn.MemorySize).toBe(512);
-    expect(fn.Timeout).toBe(15);
+    expect(fn.MemorySize).toBe(2048);
+    expect(fn.Timeout).toBe(30);
   });
 });
 
