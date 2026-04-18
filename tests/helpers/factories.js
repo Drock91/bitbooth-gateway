@@ -103,7 +103,7 @@ export function createTestRateLimitBucket(overrides = {}) {
 export function createTestWebhookDlqEntry(overrides = {}) {
   return {
     eventId: randomUUID(),
-    provider: 'coinbase',
+    provider: 'test-provider',
     payload: '{"type":"charge:confirmed"}',
     headers: { 'x-webhook-signature': 'sig123' },
     errorMessage: 'Signature mismatch',

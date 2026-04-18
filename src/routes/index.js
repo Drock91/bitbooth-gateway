@@ -14,10 +14,8 @@ import { postDemoRelay } from '../controllers/demo-relay.controller.js';
 // the apiFn at cold-start with `ENOENT: /browser/default-stylesheet.css`
 // because esbuild can't resolve jsdom's static-asset paths.
 //
-// /v1/quote is NOT routed: the 5 exchange adapters (moonpay/coinbase/kraken/
-// binance/uphold) are stubs that return fake math instead of real exchange
-// quotes. Hidden until a real adapter is wired. Adapter code lives in
-// src/adapters/* as a future-work scaffold.
+// /v1/quote is NOT routed: the stub exchange adapters have been deleted.
+// Re-route when a real adapter (e.g. Moonpay) ships.
 const routes = {
   'POST /v1/resource': requirePaidResource,
   'POST /v1/resource/premium': requirePaidResource,

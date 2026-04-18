@@ -98,9 +98,10 @@ describe('webhook.handler', () => {
 
   // --- invalid provider ---
 
-  it('returns 500 for unsupported provider (Zod parse throws)', async () => {
+  it('returns 401 for unknown provider when adapter rejects', async () => {
+    mockVerifyWebhook.mockResolvedValue(false);
     const res = await handler(makeEvent('fakeprovider'));
-    expect(res.statusCode).toBe(500);
+    expect(res.statusCode).toBe(401);
   });
 
   it('returns error when provider path param is missing', async () => {
@@ -177,14 +178,15 @@ describe('webhook.handler', () => {
     );
   });
 
-  it('records to DLQ on Zod parse error with provider fallback', async () => {
+  it('records to DLQ when adapter rejects webhook signature', async () => {
+    mockVerifyWebhook.mockResolvedValue(false);
     const res = await handler(makeEvent('fakeprovider', 'x', { h: '1' }));
-    expect(res.statusCode).toBe(500);
+    expect(res.statusCode).toBe(401);
     expect(mockDlqRecord).toHaveBeenCalledWith(
       expect.objectContaining({
         provider: 'fakeprovider',
         payload: 'x',
-        errorCode: 'INTERNAL_ERROR',
+        errorCode: 'UNAUTHORIZED',
       }),
     );
   });

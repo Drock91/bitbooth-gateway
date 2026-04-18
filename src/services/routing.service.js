@@ -1,8 +1,3 @@
-import { moonpayAdapter } from '../adapters/moonpay/index.js';
-import { coinbaseAdapter } from '../adapters/coinbase/index.js';
-import { krakenAdapter } from '../adapters/kraken/index.js';
-import { binanceAdapter } from '../adapters/binance/index.js';
-import { upholdAdapter } from '../adapters/uphold/index.js';
 import { verifyPayment as xrplEvmVerify } from '../adapters/xrpl-evm/index.js';
 import {
   verifyPayment as baseVerify,
@@ -17,13 +12,9 @@ import { UpstreamError } from '../lib/errors.js';
 export const SOLANA_MAINNET_CAIP2 = 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp';
 export const SOLANA_DEVNET_CAIP2 = 'solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1';
 
-const registry = {
-  moonpay: moonpayAdapter,
-  coinbase: coinbaseAdapter,
-  kraken: krakenAdapter,
-  binance: binanceAdapter,
-  uphold: upholdAdapter,
-};
+// Exchange adapter registry — currently empty. Re-populate when a real
+// adapter ships (e.g. Moonpay). /v1/quote remains unrouted until then.
+const registry = {};
 
 function formatIouValue(amountBaseUnits) {
   const decimals = 6;

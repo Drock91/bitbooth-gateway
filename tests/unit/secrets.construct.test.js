@@ -28,18 +28,13 @@ const ALL_SECRETS = [
     name: 'admin-api-key-hash',
     desc: 'SHA-256 hash of the admin API key for /admin endpoints',
   },
-  { prop: 'moonpay', name: 'exchanges/moonpay', desc: 'Moonpay API key + webhook secret JSON' },
-  { prop: 'coinbase', name: 'exchanges/coinbase', desc: 'Coinbase API key + webhook secret JSON' },
-  { prop: 'kraken', name: 'exchanges/kraken', desc: 'Kraken API key + webhook secret JSON' },
-  { prop: 'binance', name: 'exchanges/binance', desc: 'Binance API key + webhook secret JSON' },
-  { prop: 'uphold', name: 'exchanges/uphold', desc: 'Uphold API key + webhook secret JSON' },
 ];
 
 describe('Secrets construct', () => {
   describe('resource count', () => {
-    it('creates exactly 9 Secret resources', () => {
+    it('creates exactly 4 Secret resources', () => {
       const { template } = buildStack();
-      template.resourceCountIs('AWS::SecretsManager::Secret', 9);
+      template.resourceCountIs('AWS::SecretsManager::Secret', 4);
     });
   });
 

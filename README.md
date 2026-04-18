@@ -145,8 +145,6 @@ bitbooth-gateway/
 │   │   ├── xrpl-evm/    #   XRPL EVM Sidechain (ethers)
 │   │   ├── solana/      #   Solana mainnet + devnet (@solana/web3.js)
 │   │   └── ows/         #   Open Wallet Standard
-│   │   # NOTE: src/adapters/{moonpay,coinbase,kraken,binance,uphold} are
-│   │   # scaffold-only stubs. Not used at runtime. /v1/quote is unrouted.
 │   ├── middleware/      # x402, auth, rate-limit, idempotency, errors, CORS
 │   ├── validators/      # Zod schemas (every boundary validated)
 │   ├── repositories/    # DynamoDB (10 tables)
@@ -179,7 +177,7 @@ bitbooth-gateway/
 - **Multi-chain routing** — single API, multiple rails advertised in each 402 challenge. Agent picks based on wallet balance.
 - **Agent-native endpoint** (`/v1/fetch`) — zero signup, zero API key, pure pay-per-call. Three modes: `fast` (0.005 USDC, raw HTML → markdown), `full` (0.005 USDC, article extraction via Readability + Turndown), `render` (0.02 USDC, **Playwright JS rendering** for SPAs/dashboards that naive HTTP can't crawl).
 - **Multi-tenant SaaS** — self-service signup, API keys, per-route pricing, session-based client portal.
-- **Fiat onramping** — *not implemented yet.* The repo contains scaffold adapters for Moonpay / Coinbase / Kraken / Binance / Uphold, but they're stubs that don't make real HTTP calls. `/v1/quote` is intentionally unrouted until a real adapter ships. **Today BitBooth is crypto-in only**: agents pay from a wallet they already control.
+- **Fiat onramping** — *not implemented yet.* `/v1/quote` is unrouted until a real exchange adapter ships (e.g. Moonpay). **Today BitBooth is crypto-in only**: agents pay from a wallet they already control.
 - **Fraud prevention** — velocity rules, nonce tracking, amount bounds, configurable thresholds.
 - **Rate limiting** — token bucket, 4 tiers (Free/Starter/Growth/Scale), per-IP for anonymous callers.
 - **Idempotency** — 24h result caching via DynamoDB TTL.

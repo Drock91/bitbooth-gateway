@@ -90,7 +90,7 @@
  *
  * @typedef {Object} WebhookDlqEntry
  * @property {string} eventId
- * @property {'moonpay'|'coinbase'|'kraken'|'binance'|'uphold'} provider
+ * @property {string} provider
  * @property {string} payload
  * @property {Record<string, string>} headers
  * @property {string} errorMessage

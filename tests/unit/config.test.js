@@ -15,11 +15,6 @@ describe('lib/config', () => {
 
   const OPTIONAL_ENVS = [
     'CHAIN_RPC_URL',
-    'MOONPAY_API_KEY_SECRET_ARN',
-    'COINBASE_API_KEY_SECRET_ARN',
-    'KRAKEN_API_KEY_SECRET_ARN',
-    'BINANCE_API_KEY_SECRET_ARN',
-    'UPHOLD_API_KEY_SECRET_ARN',
     'STRIPE_WEBHOOK_SECRET_ARN',
     'BASE_RPC_SECRET_ARN',
     'ADMIN_API_KEY_HASH_SECRET_ARN',
@@ -140,9 +135,9 @@ describe('lib/config', () => {
       return { missing: mod.selfTest(), mod };
     }
 
-    it('returns all 9 optional vars when none are set', async () => {
+    it('returns all 4 optional vars when none are set', async () => {
       const { missing } = await freshSelfTest();
-      expect(missing).toHaveLength(9);
+      expect(missing).toHaveLength(4);
       expect(missing.map((m) => m.env)).toContain('CHAIN_RPC_URL');
       expect(missing.map((m) => m.env)).toContain('ADMIN_API_KEY_HASH_SECRET_ARN');
     });
@@ -150,7 +145,7 @@ describe('lib/config', () => {
     it('logs a warn for each missing optional var', async () => {
       const { logger } = await import('../../src/lib/logger.js');
       await freshSelfTest();
-      expect(logger.warn).toHaveBeenCalledTimes(9);
+      expect(logger.warn).toHaveBeenCalledTimes(4);
       expect(logger.warn).toHaveBeenCalledWith(
         expect.objectContaining({ env: 'CHAIN_RPC_URL' }),
         expect.stringContaining('CHAIN_RPC_URL not set'),
@@ -165,11 +160,6 @@ describe('lib/config', () => {
 
     it('returns empty array and logs info when all optional vars are set', async () => {
       process.env.CHAIN_RPC_URL = 'https://mainnet.base.org';
-      process.env.MOONPAY_API_KEY_SECRET_ARN = 'arn:aws:secretsmanager:us-east-1:123:secret:mp';
-      process.env.COINBASE_API_KEY_SECRET_ARN = 'arn:aws:secretsmanager:us-east-1:123:secret:cb';
-      process.env.KRAKEN_API_KEY_SECRET_ARN = 'arn:aws:secretsmanager:us-east-1:123:secret:kr';
-      process.env.BINANCE_API_KEY_SECRET_ARN = 'arn:aws:secretsmanager:us-east-1:123:secret:bn';
-      process.env.UPHOLD_API_KEY_SECRET_ARN = 'arn:aws:secretsmanager:us-east-1:123:secret:up';
       process.env.STRIPE_WEBHOOK_SECRET_ARN = 'arn:aws:secretsmanager:us-east-1:123:secret:st';
       process.env.BASE_RPC_SECRET_ARN = 'arn:aws:secretsmanager:us-east-1:123:secret:rpc';
       process.env.ADMIN_API_KEY_HASH_SECRET_ARN =
@@ -188,11 +178,11 @@ describe('lib/config', () => {
       process.env.STRIPE_WEBHOOK_SECRET_ARN = 'arn:aws:secretsmanager:us-east-1:123:secret:st';
 
       const { missing } = await freshSelfTest();
-      expect(missing).toHaveLength(7);
+      expect(missing).toHaveLength(2);
       const envs = missing.map((m) => m.env);
       expect(envs).not.toContain('CHAIN_RPC_URL');
       expect(envs).not.toContain('STRIPE_WEBHOOK_SECRET_ARN');
-      expect(envs).toContain('MOONPAY_API_KEY_SECRET_ARN');
+      expect(envs).toContain('BASE_RPC_SECRET_ARN');
     });
 
     it('each missing entry has env and impact fields', async () => {

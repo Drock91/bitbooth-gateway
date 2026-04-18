@@ -72,12 +72,12 @@ describe('scripts/rotate-secrets.js', () => {
 
     it('accepts staging stage', async () => {
       const results = await run(makeArgv(['--stage=staging']), deps());
-      expect(results).toHaveLength(9);
+      expect(results).toHaveLength(4);
     });
 
     it('accepts prod stage', async () => {
       const results = await run(makeArgv(['--stage=prod']), deps());
-      expect(results).toHaveLength(9);
+      expect(results).toHaveLength(4);
     });
   });
 
@@ -88,19 +88,14 @@ describe('scripts/rotate-secrets.js', () => {
       expect(results.every((r) => r.status === 'would-rotate')).toBe(true);
     });
 
-    it('lists all 9 secrets', async () => {
+    it('lists all 4 secrets', async () => {
       const results = await run(makeArgv(['--stage=staging']), deps());
-      expect(results).toHaveLength(9);
+      expect(results).toHaveLength(4);
       const ids = results.map((r) => r.secretId);
       expect(ids).toContain('x402/staging/agent-wallet');
       expect(ids).toContain('x402/staging/stripe-webhook');
       expect(ids).toContain('x402/staging/base-rpc');
       expect(ids).toContain('x402/staging/admin-api-key-hash');
-      expect(ids).toContain('x402/staging/exchanges/moonpay');
-      expect(ids).toContain('x402/staging/exchanges/coinbase');
-      expect(ids).toContain('x402/staging/exchanges/kraken');
-      expect(ids).toContain('x402/staging/exchanges/binance');
-      expect(ids).toContain('x402/staging/exchanges/uphold');
     });
 
     it('uses prod prefix when stage=prod', async () => {
@@ -111,7 +106,7 @@ describe('scripts/rotate-secrets.js', () => {
     it('logs dry-run summary', async () => {
       await run(makeArgv(['--stage=staging']), deps());
       expect(logLines.some((l) => l.includes('dry-run complete'))).toBe(true);
-      expect(logLines.some((l) => l.includes('9 entries would be rotated'))).toBe(true);
+      expect(logLines.some((l) => l.includes('4 entries would be rotated'))).toBe(true);
     });
 
     it('logs re-run hint', async () => {
@@ -128,29 +123,29 @@ describe('scripts/rotate-secrets.js', () => {
     it('calls GetSecretValue to verify existence before updating', async () => {
       await run(makeArgv(['--stage=staging', '--execute']), deps());
       const getCalls = mockSend.mock.calls.filter((c) => c[0]._type === 'Get');
-      expect(getCalls).toHaveLength(9);
+      expect(getCalls).toHaveLength(4);
     });
 
     it('calls UpdateSecret for each existing secret', async () => {
       await run(makeArgv(['--stage=staging', '--execute']), deps());
       const updateCalls = mockSend.mock.calls.filter((c) => c[0]._type === 'Update');
-      expect(updateCalls).toHaveLength(9);
+      expect(updateCalls).toHaveLength(4);
     });
 
-    it('reports all 9 as rotated on success', async () => {
+    it('reports all 4 as rotated on success', async () => {
       const results = await run(makeArgv(['--stage=staging', '--execute']), deps());
-      expect(results.filter((r) => r.status === 'rotated')).toHaveLength(9);
+      expect(results.filter((r) => r.status === 'rotated')).toHaveLength(4);
     });
 
     it('logs success checkmark for each rotated secret', async () => {
       await run(makeArgv(['--stage=staging', '--execute']), deps());
       const checkLines = logLines.filter((l) => l.includes('✓'));
-      expect(checkLines).toHaveLength(9);
+      expect(checkLines).toHaveLength(4);
     });
 
     it('logs done summary with counts', async () => {
       await run(makeArgv(['--stage=staging', '--execute']), deps());
-      expect(logLines.some((l) => l.includes('9 rotated, 0 skipped, 0 errors'))).toBe(true);
+      expect(logLines.some((l) => l.includes('4 rotated, 0 skipped, 0 errors'))).toBe(true);
     });
   });
 
@@ -199,18 +194,10 @@ describe('scripts/rotate-secrets.js', () => {
       expect(logLines.some((l) => l.includes('admin-api-key-hash:'))).toBe(true);
     });
 
-    it('generates valid JSON for exchange secrets with apiKey and webhookSecret', async () => {
+    it('generates correct secrets for all 4 entries', async () => {
       await run(makeArgv(['--stage=staging', '--execute']), deps());
-      for (const name of ['moonpay', 'coinbase', 'kraken', 'binance', 'uphold']) {
-        const update = mockSend.mock.calls.find(
-          (c) => c[0]._type === 'Update' && c[0].SecretId === `x402/staging/exchanges/${name}`,
-        );
-        const parsed = JSON.parse(update[0].SecretString);
-        expect(parsed).toHaveProperty('apiKey');
-        expect(parsed).toHaveProperty('webhookSecret');
-        expect(parsed.apiKey.length).toBeGreaterThan(0);
-        expect(parsed.webhookSecret.length).toBeGreaterThan(0);
-      }
+      const updateCalls = mockSend.mock.calls.filter((c) => c[0]._type === 'Update');
+      expect(updateCalls).toHaveLength(4);
     });
   });
 
@@ -282,9 +269,9 @@ describe('scripts/rotate-secrets.js', () => {
       expect(results.every((r) => r.secretId.startsWith('x402/prod/'))).toBe(true);
     });
 
-    it('rotates all 9 prod secrets successfully', async () => {
+    it('rotates all 4 prod secrets successfully', async () => {
       const results = await run(makeArgv(['--stage=prod', '--execute']), deps());
-      expect(results.filter((r) => r.status === 'rotated')).toHaveLength(9);
+      expect(results.filter((r) => r.status === 'rotated')).toHaveLength(4);
     });
   });
 
@@ -336,7 +323,7 @@ describe('scripts/rotate-secrets.js', () => {
 
     it('logs entry count', async () => {
       await run(makeArgv(['--stage=staging']), deps());
-      expect(logLines[1]).toContain('9');
+      expect(logLines[1]).toContain('4');
     });
   });
 });

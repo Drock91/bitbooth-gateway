@@ -111,11 +111,6 @@ export class Lambdas extends Construct {
 
     // --- IAM grants ---
     tables.webhookDlq.grantReadWriteData(this.dlqSweepFn);
-    secrets.moonpay.grantRead(this.dlqSweepFn);
-    secrets.coinbase.grantRead(this.dlqSweepFn);
-    secrets.kraken.grantRead(this.dlqSweepFn);
-    secrets.binance.grantRead(this.dlqSweepFn);
-    secrets.uphold.grantRead(this.dlqSweepFn);
 
     tables.payments.grantReadData(this.dashboardFn);
     tables.tenants.grantReadWriteData(this.dashboardFn);
@@ -144,17 +139,12 @@ export class Lambdas extends Construct {
     secrets.agentWallet.grantRead(this.apiFn);
     secrets.baseRpc.grantRead(this.apiFn);
     secrets.adminApiKeyHash.grantRead(this.apiFn);
-    // Exchange secret grants intentionally NOT added — /v1/quote is unrouted
-    // and the 5 exchange adapters are stubs. Re-grant when a real adapter ships.
+    // Exchange secret grants removed — stub adapters deleted. Re-grant
+    // when a real adapter (e.g. Moonpay) ships.
 
     tables.tenants.grantReadWriteData(this.webhookFn);
     tables.webhookDlq.grantReadWriteData(this.webhookFn);
     secrets.stripeWebhook.grantRead(this.webhookFn);
-    secrets.moonpay.grantRead(this.webhookFn);
-    secrets.coinbase.grantRead(this.webhookFn);
-    secrets.kraken.grantRead(this.webhookFn);
-    secrets.binance.grantRead(this.webhookFn);
-    secrets.uphold.grantRead(this.webhookFn);
 
     tables.tenants.grantReadWriteData(this.stripeWebhookFn);
     secrets.stripeWebhook.grantRead(this.stripeWebhookFn);

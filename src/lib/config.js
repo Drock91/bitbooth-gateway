@@ -4,31 +4,6 @@ import { logger } from './logger.js';
 const OPTIONAL_ENV_VARS = [
   { path: 'chain.rpcUrl', env: 'CHAIN_RPC_URL', impact: 'on-chain payment verification disabled' },
   {
-    path: 'secretArns.moonpay',
-    env: 'MOONPAY_API_KEY_SECRET_ARN',
-    impact: 'Moonpay adapter disabled',
-  },
-  {
-    path: 'secretArns.coinbase',
-    env: 'COINBASE_API_KEY_SECRET_ARN',
-    impact: 'Coinbase adapter disabled',
-  },
-  {
-    path: 'secretArns.kraken',
-    env: 'KRAKEN_API_KEY_SECRET_ARN',
-    impact: 'Kraken adapter disabled',
-  },
-  {
-    path: 'secretArns.binance',
-    env: 'BINANCE_API_KEY_SECRET_ARN',
-    impact: 'Binance adapter disabled',
-  },
-  {
-    path: 'secretArns.uphold',
-    env: 'UPHOLD_API_KEY_SECRET_ARN',
-    impact: 'Uphold adapter disabled',
-  },
-  {
     path: 'secretArns.stripe',
     env: 'STRIPE_WEBHOOK_SECRET_ARN',
     impact: 'Stripe webhook verification disabled',
@@ -79,11 +54,6 @@ const ConfigSchema = z.object({
     .optional(),
   secretArns: z.object({
     agentWallet: z.string().min(1),
-    moonpay: z.string().optional(),
-    coinbase: z.string().optional(),
-    kraken: z.string().optional(),
-    binance: z.string().optional(),
-    uphold: z.string().optional(),
     stripe: z.string().optional(),
     baseRpc: z.string().optional(),
     adminApiKeyHash: z.string().optional(),
@@ -122,11 +92,6 @@ export function getConfig() {
       : undefined,
     secretArns: {
       agentWallet: process.env.AGENT_WALLET_SECRET_ARN,
-      moonpay: process.env.MOONPAY_API_KEY_SECRET_ARN,
-      coinbase: process.env.COINBASE_API_KEY_SECRET_ARN,
-      kraken: process.env.KRAKEN_API_KEY_SECRET_ARN,
-      binance: process.env.BINANCE_API_KEY_SECRET_ARN,
-      uphold: process.env.UPHOLD_API_KEY_SECRET_ARN,
       stripe: process.env.STRIPE_WEBHOOK_SECRET_ARN,
       baseRpc: process.env.BASE_RPC_SECRET_ARN,
       adminApiKeyHash: process.env.ADMIN_API_KEY_HASH_SECRET_ARN,
