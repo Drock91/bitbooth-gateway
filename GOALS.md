@@ -48,7 +48,7 @@ Revenue math:
 | G-013 | P1 | open | 240m | Per-tenant rate-limit pooling — make plan tiers matter |
 | G-020 | P2 | blocked | 5m | Submit to MCP Registry (needs user GitHub OAuth) |
 | G-021 | P2 | blocked | 60m | Cold-email 10 MCP authors (needs user to send) |
-| G-022 | P2 | open | 90m | Blog post: Shipping the first x402 MCP server |
+| G-022 | P2 | done | 90m | Blog post: Shipping the first x402 MCP server |
 | G-023 | P2 | open | 30m | Add 30s screencast or GIF to README hero |
 | G-024 | P2 | open | 30m | Submit to directories (HN, Product Hunt, awesome-mcp) |
 | G-030 | P3 | open | 60m | Delete 5 stub exchange adapter directories |
@@ -163,8 +163,9 @@ Each goal below has full acceptance contract — what the autopilot uses to know
 **Status:** needs-user (autopilot can DRAFT individual emails using `docs/COLD_EMAIL_TEMPLATE.md`, but user must SEND from their own account)
 
 ### G-022 — Write blog post: "Shipping the first x402 MCP server"
-**Status:** pending
+**Status:** done
 **Acceptance:** ~1500 words, published as a Markdown file in `docs/blog/`. Story = the protocol journey + honest moat plan + tx-hash proof points. Cross-post to dev.to + Hashnode + heinrichstech.com.
+**Result:** `docs/blog/shipping-first-x402-mcp-server.md` — ~1,500 words covering the protocol, week-by-week build narrative, tx hash proof points (XRPL `493F6F1A…` + Base Sepolia `0x97aed0…`), honest moat assessment, revenue math, and install instructions. Ready for cross-posting (user action).
 
 ### G-023 — Add a 30-second screencast / animated GIF to the README hero
 **Status:** pending
