@@ -546,6 +546,28 @@ describe('fetchService', () => {
       expect(key).toBe('https://spa.com::render');
     });
 
+    it('passes ttlSeconds override to cache put', async () => {
+      mockCacheGet.mockResolvedValueOnce(null);
+      mockFetchWithTimeout.mockResolvedValue(mockRes(SIMPLE_HTML));
+
+      await fetchService.fetch({ url: 'https://example.com', mode: 'fast', ttlSeconds: 900 });
+
+      expect(mockCachePut).toHaveBeenCalledTimes(1);
+      const [, , ttl] = mockCachePut.mock.calls[0];
+      expect(ttl).toBe(900);
+    });
+
+    it('passes undefined ttlSeconds when not specified (uses repo default)', async () => {
+      mockCacheGet.mockResolvedValueOnce(null);
+      mockFetchWithTimeout.mockResolvedValue(mockRes(SIMPLE_HTML));
+
+      await fetchService.fetch({ url: 'https://example.com', mode: 'fast' });
+
+      expect(mockCachePut).toHaveBeenCalledTimes(1);
+      const [, , ttl] = mockCachePut.mock.calls[0];
+      expect(ttl).toBeUndefined();
+    });
+
     it('does not cache when FETCH_CACHE_ENABLED=false', async () => {
       const orig = process.env.FETCH_CACHE_ENABLED;
       process.env.FETCH_CACHE_ENABLED = 'false';

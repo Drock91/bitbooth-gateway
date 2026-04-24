@@ -525,6 +525,36 @@ describe('route.schema', () => {
     it('rejects non-digit priceWei', () => {
       expect(() => CreateRouteInput.parse({ ...valid, priceWei: 'abc' })).toThrow();
     });
+
+    it('accepts cacheTtlSeconds within bounds', () => {
+      expect(CreateRouteInput.parse({ ...valid, cacheTtlSeconds: 300 }).cacheTtlSeconds).toBe(300);
+    });
+
+    it('accepts cacheTtlSeconds at lower bound (30)', () => {
+      expect(CreateRouteInput.parse({ ...valid, cacheTtlSeconds: 30 }).cacheTtlSeconds).toBe(30);
+    });
+
+    it('accepts cacheTtlSeconds at upper bound (86400)', () => {
+      expect(CreateRouteInput.parse({ ...valid, cacheTtlSeconds: 86400 }).cacheTtlSeconds).toBe(
+        86400,
+      );
+    });
+
+    it('leaves cacheTtlSeconds undefined when omitted', () => {
+      expect(CreateRouteInput.parse(valid).cacheTtlSeconds).toBeUndefined();
+    });
+
+    it('rejects cacheTtlSeconds below 30', () => {
+      expect(() => CreateRouteInput.parse({ ...valid, cacheTtlSeconds: 29 })).toThrow();
+    });
+
+    it('rejects cacheTtlSeconds above 86400', () => {
+      expect(() => CreateRouteInput.parse({ ...valid, cacheTtlSeconds: 86401 })).toThrow();
+    });
+
+    it('rejects non-integer cacheTtlSeconds', () => {
+      expect(() => CreateRouteInput.parse({ ...valid, cacheTtlSeconds: 60.5 })).toThrow();
+    });
   });
 
   describe('RouteItem', () => {
@@ -548,6 +578,14 @@ describe('route.schema', () => {
 
     it('rejects invalid createdAt format', () => {
       expect(() => RouteItem.parse({ ...valid, createdAt: '2026-13-01' })).toThrow();
+    });
+
+    it('accepts cacheTtlSeconds on RouteItem', () => {
+      expect(RouteItem.parse({ ...valid, cacheTtlSeconds: 600 }).cacheTtlSeconds).toBe(600);
+    });
+
+    it('allows RouteItem without cacheTtlSeconds', () => {
+      expect(RouteItem.parse(valid).cacheTtlSeconds).toBeUndefined();
     });
   });
 });

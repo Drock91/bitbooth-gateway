@@ -11,12 +11,15 @@ export const FraudRules = z
   })
   .optional();
 
+export const CacheTtlSeconds = z.number().int().min(30).max(86400).optional();
+
 export const CreateRouteInput = z.object({
   tenantId: TenantId,
   path: RoutePath,
   priceWei: z.string().regex(/^\d+$/, 'Must be a non-negative integer string'),
   asset: Asset.default('USDC'),
   fraudRules: FraudRules,
+  cacheTtlSeconds: CacheTtlSeconds,
 });
 
 export const UpdateRouteInput = z.object({
@@ -24,6 +27,7 @@ export const UpdateRouteInput = z.object({
   priceWei: z.string().regex(/^\d+$/, 'Must be a non-negative integer string'),
   asset: Asset.default('USDC'),
   fraudRules: FraudRules,
+  cacheTtlSeconds: CacheTtlSeconds,
 });
 
 export const DeleteRouteInput = z.object({
@@ -36,6 +40,7 @@ export const RouteItem = z.object({
   priceWei: z.string().regex(/^\d+$/),
   asset: Asset,
   fraudRules: FraudRules,
+  cacheTtlSeconds: CacheTtlSeconds,
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });

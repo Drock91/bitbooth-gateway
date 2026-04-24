@@ -1829,6 +1829,11 @@ components:
           enum: [USDC]
         fraudRules:
           $ref: '#/components/schemas/FraudRules'
+        cacheTtlSeconds:
+          type: integer
+          minimum: 30
+          maximum: 86400
+          description: Per-route cache TTL override (seconds). Defaults to FETCH_CACHE_TTL_SECONDS (300s) when omitted.
         createdAt:
           type: string
           format: date-time
@@ -1866,6 +1871,11 @@ components:
           default: USDC
         fraudRules:
           $ref: '#/components/schemas/FraudRules'
+        cacheTtlSeconds:
+          type: integer
+          minimum: 30
+          maximum: 86400
+          description: Per-route cache TTL override (seconds). Falls back to global default (300s) when omitted.
 
     RotateKeyResponse:
       type: object

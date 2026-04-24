@@ -216,6 +216,42 @@ describe('routesRepo', () => {
         }),
       ).rejects.toThrow('network');
     });
+
+    it('stores cacheTtlSeconds when provided', async () => {
+      mockSend.mockResolvedValueOnce({});
+      const result = await routesRepo.create({
+        tenantId: validRoute.tenantId,
+        path: '/api/cached',
+        priceWei: '1000',
+        cacheTtlSeconds: 600,
+      });
+      expect(result.cacheTtlSeconds).toBe(600);
+    });
+
+    it('persists cacheTtlSeconds in DDB PutCommand', async () => {
+      mockSend.mockResolvedValueOnce({});
+      await routesRepo.create({
+        tenantId: validRoute.tenantId,
+        path: '/api/cached',
+        priceWei: '1000',
+        cacheTtlSeconds: 3600,
+      });
+      expect(PutCommand).toHaveBeenCalledWith(
+        expect.objectContaining({
+          Item: expect.objectContaining({ cacheTtlSeconds: 3600 }),
+        }),
+      );
+    });
+
+    it('leaves cacheTtlSeconds undefined when not provided', async () => {
+      mockSend.mockResolvedValueOnce({});
+      const result = await routesRepo.create({
+        tenantId: validRoute.tenantId,
+        path: '/api/no-ttl',
+        priceWei: '500',
+      });
+      expect(result.cacheTtlSeconds).toBeUndefined();
+    });
   });
 
   describe('update', () => {
@@ -275,6 +311,27 @@ describe('routesRepo', () => {
         priceWei: '100',
       });
       expect(result.asset).toBe('USDC');
+    });
+
+    it('stores cacheTtlSeconds on update', async () => {
+      mockSend.mockResolvedValueOnce({ Item: { ...validRoute } });
+      mockSend.mockResolvedValueOnce({});
+      const result = await routesRepo.update(validRoute.tenantId, validRoute.path, {
+        priceWei: '1000000',
+        cacheTtlSeconds: 900,
+      });
+      expect(result.cacheTtlSeconds).toBe(900);
+    });
+
+    it('clears cacheTtlSeconds when omitted from update', async () => {
+      mockSend.mockResolvedValueOnce({
+        Item: { ...validRoute, cacheTtlSeconds: 600 },
+      });
+      mockSend.mockResolvedValueOnce({});
+      const result = await routesRepo.update(validRoute.tenantId, validRoute.path, {
+        priceWei: '1000000',
+      });
+      expect(result.cacheTtlSeconds).toBeUndefined();
     });
   });
 

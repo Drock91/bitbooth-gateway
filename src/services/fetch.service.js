@@ -107,7 +107,7 @@ export const fetchService = {
     }
   },
 
-  async fetch({ url, mode }) {
+  async fetch({ url, mode, ttlSeconds }) {
     if (CACHE_ENABLED) {
       const key = cacheKey(url, mode);
       try {
@@ -129,7 +129,7 @@ export const fetchService = {
     if (CACHE_ENABLED) {
       const key = cacheKey(url, mode);
       try {
-        await fetchCacheRepo.put(key, { url, mode, ...result });
+        await fetchCacheRepo.put(key, { url, mode, ...result }, ttlSeconds);
       } catch (_) {
         // Cache write failure is non-fatal.
       }

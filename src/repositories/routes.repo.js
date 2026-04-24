@@ -39,6 +39,7 @@ export const routesRepo = {
       priceWei: input.priceWei,
       asset: input.asset ?? 'USDC',
       fraudRules: input.fraudRules,
+      cacheTtlSeconds: input.cacheTtlSeconds,
       createdAt: now,
       updatedAt: now,
     };
@@ -69,6 +70,7 @@ export const routesRepo = {
       priceWei: fields.priceWei,
       asset: fields.asset ?? 'USDC',
       fraudRules: fields.fraudRules,
+      cacheTtlSeconds: fields.cacheTtlSeconds,
       createdAt: existing.createdAt,
       updatedAt: now,
     };

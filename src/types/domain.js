@@ -58,6 +58,7 @@
  * @property {string} priceWei
  * @property {'USDC'} asset
  * @property {FraudRules} [fraudRules]
+ * @property {number} [cacheTtlSeconds]
  * @property {string} createdAt
  * @property {string} updatedAt
  *
