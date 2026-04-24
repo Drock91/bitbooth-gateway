@@ -97,6 +97,16 @@ async function fetchHtml(url) {
 }
 
 export const fetchService = {
+  async isCached(url, mode) {
+    if (!CACHE_ENABLED) return false;
+    try {
+      const key = cacheKey(url, mode);
+      return Boolean(await fetchCacheRepo.get(key));
+    } catch (_) {
+      return false;
+    }
+  },
+
   async fetch({ url, mode }) {
     if (CACHE_ENABLED) {
       const key = cacheKey(url, mode);

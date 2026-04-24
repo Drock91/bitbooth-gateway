@@ -8,6 +8,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- G-012 (partial): Cache-aware x402 pricing — cache hits charged at 20% of full price (0.001 USDC fast/full, 0.004 USDC render). `fetchService.isCached()` check runs before x402 challenge so agents pay less for shared fetches. Env vars `SHARED_FETCH_PRICE_WEI` / `SHARED_RENDER_PRICE_WEI` configurable. 12 new tests (3,318 total)
 - G-022: Blog post "Shipping the first x402 MCP server" — ~1,500 words in `docs/blog/shipping-first-x402-mcp-server.md` covering protocol journey, build narrative, tx hash proof points, honest moat assessment, and revenue math. Ready for cross-posting to dev.to / Hashnode / heinrichstech.com
 - G-001a: Earnings dashboard testnet/mainnet toggle — Real money / Testnet / All filter with `?mode=` query param on `/admin/earnings.json`, TESTNET badges on chain rows, mode-aware KPI labels (31 new tests, 3337 total)
 - G-010: Playwright JS rendering via `mode: "render"` on `/v1/fetch` — render service with browser singleton, Readability extraction of rendered content, 4× pricing ($0.02 USDC), Lambda bumped to 2048 MB / 30s timeout, README + mcp-fetch README updated with render mode docs, 34 new tests (3,368 total)

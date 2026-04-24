@@ -579,6 +579,71 @@ describe('fetchService', () => {
     });
   });
 
+  describe('isCached', () => {
+    it('returns true when cache entry exists', async () => {
+      mockCacheGet.mockResolvedValueOnce({
+        title: 'Cached',
+        markdown: '# Cached',
+        metadata: '{}',
+        ttl: Math.floor(Date.now() / 1000) + 300,
+      });
+
+      const result = await fetchService.isCached('https://example.com', 'fast');
+      expect(result).toBe(true);
+      expect(mockCacheGet).toHaveBeenCalledWith('https://example.com::fast');
+    });
+
+    it('returns false on cache miss', async () => {
+      mockCacheGet.mockResolvedValueOnce(null);
+
+      const result = await fetchService.isCached('https://example.com', 'fast');
+      expect(result).toBe(false);
+    });
+
+    it('returns false on cache read error', async () => {
+      mockCacheGet.mockRejectedValueOnce(new Error('DDB timeout'));
+
+      const result = await fetchService.isCached('https://example.com', 'fast');
+      expect(result).toBe(false);
+    });
+
+    it('uses mode in cache key', async () => {
+      mockCacheGet.mockResolvedValueOnce(null);
+
+      await fetchService.isCached('https://example.com', 'render');
+      expect(mockCacheGet).toHaveBeenCalledWith('https://example.com::render');
+    });
+
+    it('returns false when cache is disabled', async () => {
+      const orig = process.env.FETCH_CACHE_ENABLED;
+      process.env.FETCH_CACHE_ENABLED = 'false';
+
+      try {
+        vi.resetModules();
+        vi.mock('../../src/lib/http.js', () => ({
+          fetchWithTimeout: mockFetchWithTimeout,
+        }));
+        vi.mock('../../src/services/render.service.js', () => ({
+          renderService: { renderPage: mockRenderPage, closeBrowser: vi.fn() },
+        }));
+        vi.mock('../../src/repositories/fetch-cache.repo.js', () => ({
+          fetchCacheRepo: { get: mockCacheGet, put: mockCachePut },
+          cacheKey: (url, mode) => `${url}::${mode}`,
+        }));
+        const { fetchService: freshService } = await import(
+          '../../src/services/fetch.service.js'
+        );
+
+        const result = await freshService.isCached('https://example.com', 'fast');
+        expect(result).toBe(false);
+        expect(mockCacheGet).not.toHaveBeenCalled();
+      } finally {
+        if (orig === undefined) delete process.env.FETCH_CACHE_ENABLED;
+        else process.env.FETCH_CACHE_ENABLED = orig;
+      }
+    });
+  });
+
   describe('fetch — turndown options', () => {
     it('converts headings to ATX style', async () => {
       const html =

@@ -44,7 +44,7 @@ Revenue math:
 | G-004 | P0 | done | 90m | Build /docs/agents agent-onboarding page |
 | G-010 | P1 | done | 240m | mode:render via Playwright (JS rendering — the real moat) |
 | G-011 | P1 | done | 60m | Replace naive html→md with Readability+Turndown |
-| G-012 | P1 | in_progress | 180m | DDB-backed shared cache (multiple agents share one fetch) |
+| G-012 | P1 | in_progress | 180m | DDB-backed shared cache — cache-aware pricing shipped, dashboard stat + settlement TBD |
 | G-013 | P1 | open | 240m | Per-tenant rate-limit pooling — make plan tiers matter |
 | G-020 | P2 | blocked | 5m | Submit to MCP Registry (needs user GitHub OAuth) |
 | G-021 | P2 | blocked | 60m | Cold-email 10 MCP authors (needs user to send) |
@@ -132,7 +132,7 @@ Each goal below has full acceptance contract — what the autopilot uses to know
 - Output measurably better than current `mode: "fast"` (manual review acceptable)
 
 ### G-012 — DDB-backed shared cache so multiple agents fetching the same URL split the payment
-**Status:** pending
+**Status:** in_progress (cache-aware pricing shipped — cache hit → 20% of full price; remaining: settlement logic, per-route TTL, dashboard stat)
 **Why:** dramatically improves unit economics for agents (and for us, since we still get paid by each one). N agents hitting the same URL within TTL pay 0.005 / N each.
 **Acceptance:**
 - New `fetch-cache` DDB table with TTL

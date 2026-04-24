@@ -9,11 +9,15 @@ import { UnauthorizedError } from '../lib/errors.js';
 
 const FETCH_PRICE_WEI = process.env.FETCH_PRICE_WEI || '5000'; // 0.005 USDC
 const RENDER_PRICE_WEI = process.env.RENDER_PRICE_WEI || '20000'; // 0.02 USDC
+const SHARED_FETCH_PRICE_WEI = process.env.SHARED_FETCH_PRICE_WEI || '1000'; // 0.001 USDC
+const SHARED_RENDER_PRICE_WEI = process.env.SHARED_RENDER_PRICE_WEI || '4000'; // 0.004 USDC
 
-function fetchRoute(mode) {
+function fetchRoute(mode, cached = false) {
+  const full = mode === 'render' ? RENDER_PRICE_WEI : FETCH_PRICE_WEI;
+  const shared = mode === 'render' ? SHARED_RENDER_PRICE_WEI : SHARED_FETCH_PRICE_WEI;
   return {
     resource: '/v1/fetch',
-    amountWei: mode === 'render' ? RENDER_PRICE_WEI : FETCH_PRICE_WEI,
+    amountWei: cached ? shared : full,
     assetSymbol: 'USDC',
     fraudRules: undefined,
   };
@@ -44,7 +48,10 @@ export async function postFetch(event) {
   // render mode costs 4× more than fast/full.
   const input = parseBody(FetchRequest, event.body);
 
-  await enforceX402({ headers, accountId, route: fetchRoute(input.mode) });
+  // Cache hits get a reduced "shared" price — the first fetcher paid full
+  // price, subsequent agents within the TTL window pay ~20%.
+  const cached = await fetchService.isCached(input.url, input.mode);
+  await enforceX402({ headers, accountId, route: fetchRoute(input.mode, cached) });
 
   const result = await fetchService.fetch(input);
 

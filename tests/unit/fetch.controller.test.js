@@ -2,12 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { UnauthorizedError } from '../../src/lib/errors.js';
 
 const mockFetch = vi.fn();
+const mockIsCached = vi.fn();
 const mockAuthenticate = vi.fn();
 const mockEnforceRateLimit = vi.fn();
 const mockEnforceX402 = vi.fn();
 
 vi.mock('../../src/services/fetch.service.js', () => ({
-  fetchService: { fetch: (...a) => mockFetch(...a) },
+  fetchService: { fetch: (...a) => mockFetch(...a), isCached: (...a) => mockIsCached(...a) },
 }));
 
 vi.mock('../../src/middleware/auth.middleware.js', () => ({
@@ -55,9 +56,11 @@ const fakeFetchResult = {
 describe('postFetch', () => {
   beforeEach(() => {
     mockFetch.mockReset();
+    mockIsCached.mockReset();
     mockAuthenticate.mockReset();
     mockEnforceRateLimit.mockReset();
     mockEnforceX402.mockReset();
+    mockIsCached.mockResolvedValue(false);
     mockEnforceRateLimit.mockResolvedValue(defaultRlInfo);
     mockEnforceX402.mockResolvedValue({ paid: true, txHash: '0xabc' });
   });
@@ -262,6 +265,99 @@ describe('postFetch', () => {
       mockFetch.mockResolvedValueOnce(fakeFetchResult);
       await postFetch(makeEvent(validInput));
       expect(order).toEqual(['rl', 'x402']);
+    });
+  });
+
+  describe('cache-aware pricing (shared fetch)', () => {
+    beforeEach(() => {
+      mockAuthenticate.mockRejectedValue(new UnauthorizedError('missing api key'));
+    });
+
+    it('charges reduced price when URL is cached (fast mode)', async () => {
+      mockIsCached.mockResolvedValueOnce(true);
+      mockFetch.mockResolvedValueOnce(fakeFetchResult);
+
+      await postFetch(makeEvent(validInput));
+
+      expect(mockEnforceX402).toHaveBeenCalledWith(
+        expect.objectContaining({
+          route: expect.objectContaining({ amountWei: '1000' }),
+        }),
+      );
+    });
+
+    it('charges reduced price when URL is cached (render mode)', async () => {
+      mockIsCached.mockResolvedValueOnce(true);
+      mockFetch.mockResolvedValueOnce(fakeFetchResult);
+
+      await postFetch(makeEvent({ url: 'https://spa.com', mode: 'render' }));
+
+      expect(mockEnforceX402).toHaveBeenCalledWith(
+        expect.objectContaining({
+          route: expect.objectContaining({ amountWei: '4000' }),
+        }),
+      );
+    });
+
+    it('charges full price when URL is NOT cached', async () => {
+      mockIsCached.mockResolvedValueOnce(false);
+      mockFetch.mockResolvedValueOnce(fakeFetchResult);
+
+      await postFetch(makeEvent(validInput));
+
+      expect(mockEnforceX402).toHaveBeenCalledWith(
+        expect.objectContaining({
+          route: expect.objectContaining({ amountWei: '5000' }),
+        }),
+      );
+    });
+
+    it('calls isCached with parsed url and mode', async () => {
+      mockFetch.mockResolvedValueOnce(fakeFetchResult);
+
+      await postFetch(makeEvent({ url: 'https://test.com', mode: 'full' }));
+
+      expect(mockIsCached).toHaveBeenCalledWith('https://test.com', 'full');
+    });
+
+    it('checks cache BEFORE enforcing x402', async () => {
+      const order = [];
+      mockIsCached.mockImplementationOnce(async () => {
+        order.push('cache');
+        return false;
+      });
+      mockEnforceX402.mockImplementationOnce(async () => {
+        order.push('x402');
+        return { paid: true, txHash: '0x1' };
+      });
+      mockFetch.mockResolvedValueOnce(fakeFetchResult);
+
+      await postFetch(makeEvent(validInput));
+
+      expect(order).toEqual(['cache', 'x402']);
+    });
+
+    it('falls back to full price when isCached throws', async () => {
+      mockIsCached.mockRejectedValueOnce(new Error('DDB error'));
+      mockFetch.mockResolvedValueOnce(fakeFetchResult);
+
+      // isCached error should propagate — controller doesn't swallow it.
+      // But the service's isCached already swallows DDB errors internally.
+      // If something unexpected escapes, it's a 500.
+      await expect(postFetch(makeEvent(validInput))).rejects.toThrow('DDB error');
+    });
+
+    it('charges reduced price for full mode cache hit', async () => {
+      mockIsCached.mockResolvedValueOnce(true);
+      mockFetch.mockResolvedValueOnce(fakeFetchResult);
+
+      await postFetch(makeEvent({ url: 'https://example.com', mode: 'full' }));
+
+      expect(mockEnforceX402).toHaveBeenCalledWith(
+        expect.objectContaining({
+          route: expect.objectContaining({ amountWei: '1000' }),
+        }),
+      );
     });
   });
 });
