@@ -44,8 +44,8 @@ Revenue math:
 | G-004 | P0 | done | 90m | Build /docs/agents agent-onboarding page |
 | G-010 | P1 | done | 240m | mode:render via Playwright (JS rendering — the real moat) |
 | G-011 | P1 | done | 60m | Replace naive html→md with Readability+Turndown |
-| G-012 | P1 | in_progress | 180m | DDB-backed shared cache — pricing + per-route TTL shipped, settlement + dashboard stat TBD |
-| G-013 | P1 | open | 240m | Per-tenant rate-limit pooling — make plan tiers matter |
+| G-012 | P1 | open | 180m | DDB-backed shared cache — pricing + per-route TTL shipped, settlement + dashboard stat TBD |
+| G-013 | P0 | open | 240m | Per-tenant rate-limit pooling — make plan tiers matter (HARDEN — promoted to P0 to break supervisor polish-loop) |
 | G-020 | P2 | blocked | 5m | Submit to MCP Registry (needs user GitHub OAuth) |
 | G-021 | P2 | blocked | 60m | Cold-email 10 MCP authors (needs user to send) |
 | G-022 | P2 | done | 90m | Blog post: Shipping the first x402 MCP server |
