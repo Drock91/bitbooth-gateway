@@ -25,9 +25,9 @@ function tableByName(template, nameFragment) {
 describe('Tables construct — table count', () => {
   const { template } = buildStack();
 
-  it('creates exactly 10 DynamoDB tables', () => {
+  it('creates exactly 11 DynamoDB tables', () => {
     const count = Object.keys(allTables(template)).length;
-    expect(count).toBe(10);
+    expect(count).toBe(11);
   });
 });
 
@@ -56,6 +56,7 @@ describe('Tables construct — table names', () => {
     'x402-fraud-tally-staging',
     'x402-agent-nonces-staging',
     'x402-webhook-dlq-staging',
+    'x402-fetch-cache-staging',
   ])('creates table %s', (expected) => {
     expect(names).toContain(expected);
   });
@@ -257,8 +258,8 @@ describe('Tables construct — removal policy', () => {
 describe('Tables construct — this.all accessor', () => {
   const { tables } = buildStack();
 
-  it('exposes all 10 tables in this.all', () => {
-    expect(tables.all).toHaveLength(10);
+  it('exposes all 11 tables in this.all', () => {
+    expect(tables.all).toHaveLength(11);
   });
 
   it('this.all entries are [name, Table] pairs', () => {
@@ -273,6 +274,7 @@ describe('Tables construct — this.all accessor', () => {
       'FraudTally',
       'AgentNonces',
       'WebhookDlq',
+      'FetchCache',
     ];
     const names = tables.all.map(([name]) => name);
     expect(names).toEqual(expectedNames);
@@ -290,6 +292,7 @@ describe('Tables construct — this.all accessor', () => {
       FraudTally: tables.fraudTally,
       AgentNonces: tables.agentNonces,
       WebhookDlq: tables.webhookDlq,
+      FetchCache: tables.fetchCache,
     };
     for (const [name, table] of tables.all) {
       expect(table).toBe(map[name]);

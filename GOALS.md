@@ -44,19 +44,19 @@ Revenue math:
 | G-004 | P0 | done | 90m | Build /docs/agents agent-onboarding page |
 | G-010 | P1 | done | 240m | mode:render via Playwright (JS rendering — the real moat) |
 | G-011 | P1 | done | 60m | Replace naive html→md with Readability+Turndown |
-| G-012 | P1 | open | 180m | DDB-backed shared cache (multiple agents share one fetch) |
+| G-012 | P1 | in_progress | 180m | DDB-backed shared cache (multiple agents share one fetch) |
 | G-013 | P1 | open | 240m | Per-tenant rate-limit pooling — make plan tiers matter |
 | G-020 | P2 | blocked | 5m | Submit to MCP Registry (needs user GitHub OAuth) |
 | G-021 | P2 | blocked | 60m | Cold-email 10 MCP authors (needs user to send) |
 | G-022 | P2 | done | 90m | Blog post: Shipping the first x402 MCP server |
 | G-023 | P2 | open | 30m | Add 30s screencast or GIF to README hero |
 | G-024 | P2 | open | 30m | Submit to directories (HN, Product Hunt, awesome-mcp) |
-| G-030 | P3 | open | 60m | Delete 5 stub exchange adapter directories |
+| G-030 | P3 | done | 60m | Delete 5 stub exchange adapter directories |
 | G-031 | P3 | open | 180m | TOTP 2FA on admin console |
 | G-032 | P3 | done | 30m | Split admin.controller.js (624 lines into 5 files) |
 | G-033 | P3 | open | 120m | Materialize daily earnings rollup table |
 | G-034 | P3 | open | 180m | Real Moonpay adapter (replace stub) |
-| G-035 | P3 | open | 60m | Wire Solana + XRPL-EVM into buildChallenge |
+| G-035 | P3 | done | 60m | Wire Solana + XRPL-EVM into buildChallenge |
 | G-040 | P3 | open | 600m | Marketplace MVP for third-party API publishers |
 | G-041 | P3 | open | 240m | Native XRPL signing in @bitbooth/mcp-fetch |
 | G-042 | P3 | open | 240m | Lightning Network (L402) adapter |
@@ -185,7 +185,7 @@ Each goal below has full acceptance contract — what the autopilot uses to know
 ## P3 — Tech debt + polish
 
 ### G-030 — Delete the 5 stub exchange adapter directories
-**Status:** pending (low risk, ~50 file diff)
+**Status:** done (stubs already deleted in prior ticks; routing.service.js cleaned up)
 **Why:** dead code. Currently labeled as "scaffold" but it's just confusion. Pure deletion + remove imports from routing.service.js.
 
 ### G-031 — TOTP 2FA on admin console
@@ -214,7 +214,7 @@ Each goal below has full acceptance contract — what the autopilot uses to know
 - Smoke-tested with `curl /v1/quote` returning a quote whose `cryptoAmount` matches Moonpay's website within 1%
 
 ### G-035 — Solana + XRPL-EVM into `buildChallenge`
-**Status:** pending
+**Status:** done (all chain adapters registered in chainRouter; buildChallenge includes Solana + XRPL options when configured)
 **Why:** README claims they're "adapter ready, not yet wired." Wire them so the next launched chain is a 5-line change instead of a multi-day project.
 
 ---

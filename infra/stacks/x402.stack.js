@@ -55,6 +55,7 @@ export class X402Stack extends Stack {
       FRAUD_TALLY_TABLE: tables.fraudTally.tableName,
       AGENT_NONCES_TABLE: tables.agentNonces.tableName,
       WEBHOOK_DLQ_TABLE: tables.webhookDlq.tableName,
+      FETCH_CACHE_TABLE: tables.fetchCache.tableName,
       FRAUD_MAX_PAYMENTS_PER_MINUTE: '5',
       FRAUD_MAX_PAYMENTS_PER_HOUR: '60',
       FRAUD_MAX_NONCE_FAILURES_PER_MINUTE: '3',

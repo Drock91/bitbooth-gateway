@@ -4,9 +4,11 @@ import TurndownService from 'turndown';
 import { fetchWithTimeout } from '../lib/http.js';
 import { UpstreamError, ValidationError } from '../lib/errors.js';
 import { renderService } from './render.service.js';
+import { fetchCacheRepo, cacheKey } from '../repositories/fetch-cache.repo.js';
 
 const MAX_BODY_BYTES = Number(process.env.FETCH_MAX_BODY_BYTES) || 2 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = Number(process.env.FETCH_TIMEOUT_MS) || 10_000;
+const CACHE_ENABLED = process.env.FETCH_CACHE_ENABLED !== 'false';
 
 function buildTurndown() {
   const td = new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced' });
@@ -96,46 +98,77 @@ async function fetchHtml(url) {
 
 export const fetchService = {
   async fetch({ url, mode }) {
-    if (mode === 'render') {
-      const rendered = await renderService.renderPage(url);
-      const article = extractArticle(rendered.html, url);
-      const td = buildTurndown();
-      const markdown = td.turndown(article.content);
-      return {
-        title: rendered.title || article.title,
-        markdown,
-        metadata: {
-          url,
-          fetchedAt: new Date().toISOString(),
-          contentLength: rendered.contentLength,
-          truncated: rendered.truncated,
-        },
-      };
+    if (CACHE_ENABLED) {
+      const key = cacheKey(url, mode);
+      try {
+        const cached = await fetchCacheRepo.get(key);
+        if (cached) {
+          return {
+            title: cached.title,
+            markdown: cached.markdown,
+            metadata: { ...JSON.parse(cached.metadata), cached: true },
+          };
+        }
+      } catch (_) {
+        // Cache read failure is non-fatal — just fetch normally.
+      }
     }
 
-    const { html, contentLength, truncated } = await fetchHtml(url);
+    const result = await fetchFresh(url, mode);
 
-    let title, markdown;
-    if (mode === 'fast') {
-      const td = buildTurndown();
-      title = '';
-      markdown = td.turndown(html);
-    } else {
-      const article = extractArticle(html, url);
-      title = article.title;
-      const td = buildTurndown();
-      markdown = td.turndown(article.content);
+    if (CACHE_ENABLED) {
+      const key = cacheKey(url, mode);
+      try {
+        await fetchCacheRepo.put(key, { url, mode, ...result });
+      } catch (_) {
+        // Cache write failure is non-fatal.
+      }
     }
 
+    return result;
+  },
+};
+
+async function fetchFresh(url, mode) {
+  if (mode === 'render') {
+    const rendered = await renderService.renderPage(url);
+    const article = extractArticle(rendered.html, url);
+    const td = buildTurndown();
+    const markdown = td.turndown(article.content);
     return {
-      title,
+      title: rendered.title || article.title,
       markdown,
       metadata: {
         url,
         fetchedAt: new Date().toISOString(),
-        contentLength,
-        truncated,
+        contentLength: rendered.contentLength,
+        truncated: rendered.truncated,
       },
     };
-  },
-};
+  }
+
+  const { html, contentLength, truncated } = await fetchHtml(url);
+
+  let title, markdown;
+  if (mode === 'fast') {
+    const td = buildTurndown();
+    title = '';
+    markdown = td.turndown(html);
+  } else {
+    const article = extractArticle(html, url);
+    title = article.title;
+    const td = buildTurndown();
+    markdown = td.turndown(article.content);
+  }
+
+  return {
+    title,
+    markdown,
+    metadata: {
+      url,
+      fetchedAt: new Date().toISOString(),
+      contentLength,
+      truncated,
+    },
+  };
+}

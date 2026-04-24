@@ -98,6 +98,15 @@ export class Tables extends Construct {
       removalPolicy: retain,
     });
 
+    this.fetchCache = new Table(this, 'FetchCacheTable', {
+      tableName: `x402-fetch-cache-${stage}`,
+      partitionKey: { name: 'cacheKey', type: AttributeType.STRING },
+      billingMode: BillingMode.PAY_PER_REQUEST,
+      pointInTimeRecovery: true,
+      timeToLiveAttribute: 'ttl',
+      removalPolicy: retain,
+    });
+
     this.webhookDlq = new Table(this, 'WebhookDlqTable', {
       tableName: `x402-webhook-dlq-${stage}`,
       partitionKey: { name: 'eventId', type: AttributeType.STRING },
@@ -130,6 +139,7 @@ export class Tables extends Construct {
       ['FraudTally', this.fraudTally],
       ['AgentNonces', this.agentNonces],
       ['WebhookDlq', this.webhookDlq],
+      ['FetchCache', this.fetchCache],
     ];
   }
 }

@@ -39,6 +39,7 @@ function buildStack(stage = 'dev') {
       ['FraudTally', mkTable(stack, 'FraudTally')],
       ['AgentNonces', mkTable(stack, 'AgentNonces')],
       ['WebhookDlq', mkTable(stack, 'WebhookDlq')],
+      ['FetchCache', mkTable(stack, 'FetchCache')],
     ],
   };
 
@@ -114,8 +115,8 @@ describe('Alarms construct — alarm count', () => {
   const { template } = buildStack();
   const count = Object.keys(allAlarms(template)).length;
 
-  it('creates exactly 26 alarms', () => {
-    expect(count).toBe(26);
+  it('creates exactly 27 alarms', () => {
+    expect(count).toBe(27);
   });
 });
 
@@ -222,9 +223,9 @@ describe('Alarms construct — API GW 4xx alarm', () => {
 describe('Alarms construct — DDB throttle alarms', () => {
   const { template } = buildStack('dev');
 
-  it('creates 10 DDB throttle alarms', () => {
+  it('creates 11 DDB throttle alarms', () => {
     const throttleAlarms = alarmsByNameFragment(template, 'ddb-');
-    expect(throttleAlarms.length).toBe(10);
+    expect(throttleAlarms.length).toBe(11);
   });
 
   it.each([
@@ -238,6 +239,7 @@ describe('Alarms construct — DDB throttle alarms', () => {
     'fraudtally',
     'agentnonces',
     'webhookdlq',
+    'fetchcache',
   ])('creates throttle alarm for %s table', (name) => {
     const matches = alarmsByNameFragment(template, `ddb-${name}-throttles`);
     expect(matches.length).toBe(1);
@@ -400,12 +402,12 @@ describe('Alarms construct — stage naming', () => {
   it('uses dev stage in alarm names', () => {
     const { template } = buildStack('dev');
     const matches = alarmsByNameFragment(template, 'x402-dev-');
-    expect(matches.length).toBe(26);
+    expect(matches.length).toBe(27);
   });
 
   it('uses prod stage in alarm names', () => {
     const { template } = buildStack('prod');
     const matches = alarmsByNameFragment(template, 'x402-prod-');
-    expect(matches.length).toBe(26);
+    expect(matches.length).toBe(27);
   });
 });

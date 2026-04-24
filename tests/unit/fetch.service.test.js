@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockFetchWithTimeout = vi.hoisted(() => vi.fn());
 const mockRenderPage = vi.hoisted(() => vi.fn());
+const mockCacheGet = vi.hoisted(() => vi.fn());
+const mockCachePut = vi.hoisted(() => vi.fn());
 
 vi.mock('../../src/lib/http.js', () => ({
   fetchWithTimeout: mockFetchWithTimeout,
@@ -9,6 +11,11 @@ vi.mock('../../src/lib/http.js', () => ({
 
 vi.mock('../../src/services/render.service.js', () => ({
   renderService: { renderPage: mockRenderPage, closeBrowser: vi.fn() },
+}));
+
+vi.mock('../../src/repositories/fetch-cache.repo.js', () => ({
+  fetchCacheRepo: { get: mockCacheGet, put: mockCachePut },
+  cacheKey: (url, mode) => `${url}::${mode}`,
 }));
 
 import { fetchService } from '../../src/services/fetch.service.js';
@@ -56,7 +63,10 @@ The more text we have, the more likely it is that the parser will identify this 
 </body></html>`;
 
 describe('fetchService', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockCacheGet.mockResolvedValue(null);
+  });
 
   describe('fetch — success paths', () => {
     it('returns markdown in fast mode', async () => {
@@ -453,6 +463,119 @@ describe('fetchService', () => {
 
       expect(result.metadata.truncated).toBe(true);
       expect(result.metadata.contentLength).toBe(3 * 1024 * 1024);
+    });
+  });
+
+  describe('fetch — cache integration', () => {
+    it('returns cached result on cache hit', async () => {
+      mockCacheGet.mockResolvedValueOnce({
+        title: 'Cached Title',
+        markdown: '# Cached',
+        metadata: JSON.stringify({
+          url: 'https://example.com',
+          fetchedAt: '2026-01-01T00:00:00.000Z',
+          contentLength: 100,
+          truncated: false,
+        }),
+        ttl: Math.floor(Date.now() / 1000) + 300,
+      });
+
+      const result = await fetchService.fetch({ url: 'https://example.com', mode: 'fast' });
+
+      expect(result.title).toBe('Cached Title');
+      expect(result.markdown).toBe('# Cached');
+      expect(result.metadata.cached).toBe(true);
+      expect(mockFetchWithTimeout).not.toHaveBeenCalled();
+    });
+
+    it('falls through to live fetch on cache miss', async () => {
+      mockCacheGet.mockResolvedValueOnce(null);
+      mockFetchWithTimeout.mockResolvedValue(mockRes(SIMPLE_HTML));
+
+      const result = await fetchService.fetch({ url: 'https://example.com', mode: 'fast' });
+
+      expect(result.markdown).toContain('Hello World');
+      expect(result.metadata.cached).toBeUndefined();
+    });
+
+    it('stores result in cache after a fresh fetch', async () => {
+      mockCacheGet.mockResolvedValueOnce(null);
+      mockFetchWithTimeout.mockResolvedValue(mockRes(SIMPLE_HTML));
+
+      await fetchService.fetch({ url: 'https://example.com', mode: 'fast' });
+
+      expect(mockCachePut).toHaveBeenCalledTimes(1);
+      const [key, data] = mockCachePut.mock.calls[0];
+      expect(key).toBe('https://example.com::fast');
+      expect(data.url).toBe('https://example.com');
+      expect(data.mode).toBe('fast');
+    });
+
+    it('survives cache read failure gracefully', async () => {
+      mockCacheGet.mockRejectedValueOnce(new Error('DDB timeout'));
+      mockFetchWithTimeout.mockResolvedValue(mockRes(SIMPLE_HTML));
+
+      const result = await fetchService.fetch({ url: 'https://example.com', mode: 'fast' });
+
+      expect(result.markdown).toContain('Hello World');
+    });
+
+    it('survives cache write failure gracefully', async () => {
+      mockCacheGet.mockResolvedValueOnce(null);
+      mockCachePut.mockRejectedValueOnce(new Error('DDB write fail'));
+      mockFetchWithTimeout.mockResolvedValue(mockRes(SIMPLE_HTML));
+
+      const result = await fetchService.fetch({ url: 'https://example.com', mode: 'fast' });
+
+      expect(result.markdown).toContain('Hello World');
+    });
+
+    it('caches render mode results separately', async () => {
+      mockCacheGet.mockResolvedValueOnce(null);
+      mockRenderPage.mockResolvedValue({
+        html: '<html><body><h1>SPA</h1><p>Content.</p></body></html>',
+        title: 'SPA',
+        contentLength: 50,
+        truncated: false,
+      });
+
+      await fetchService.fetch({ url: 'https://spa.com', mode: 'render' });
+
+      expect(mockCachePut).toHaveBeenCalledTimes(1);
+      const [key] = mockCachePut.mock.calls[0];
+      expect(key).toBe('https://spa.com::render');
+    });
+
+    it('does not cache when FETCH_CACHE_ENABLED=false', async () => {
+      const orig = process.env.FETCH_CACHE_ENABLED;
+      process.env.FETCH_CACHE_ENABLED = 'false';
+
+      try {
+        // Re-import to pick up the env var change
+        vi.resetModules();
+        vi.mock('../../src/lib/http.js', () => ({
+          fetchWithTimeout: mockFetchWithTimeout,
+        }));
+        vi.mock('../../src/services/render.service.js', () => ({
+          renderService: { renderPage: mockRenderPage, closeBrowser: vi.fn() },
+        }));
+        vi.mock('../../src/repositories/fetch-cache.repo.js', () => ({
+          fetchCacheRepo: { get: mockCacheGet, put: mockCachePut },
+          cacheKey: (url, mode) => `${url}::${mode}`,
+        }));
+        const { fetchService: freshService } = await import(
+          '../../src/services/fetch.service.js'
+        );
+
+        mockFetchWithTimeout.mockResolvedValue(mockRes(SIMPLE_HTML));
+        await freshService.fetch({ url: 'https://example.com', mode: 'fast' });
+
+        expect(mockCacheGet).not.toHaveBeenCalled();
+        expect(mockCachePut).not.toHaveBeenCalled();
+      } finally {
+        if (orig === undefined) delete process.env.FETCH_CACHE_ENABLED;
+        else process.env.FETCH_CACHE_ENABLED = orig;
+      }
     });
   });
 

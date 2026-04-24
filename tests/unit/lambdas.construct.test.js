@@ -31,6 +31,7 @@ function buildStack(stage = 'dev') {
     fraudTally: mkTable(stack, 'FraudTally'),
     agentNonces: mkTable(stack, 'AgentNonces'),
     webhookDlq: mkTable(stack, 'WebhookDlq'),
+    fetchCache: mkTable(stack, 'FetchCache'),
   };
 
   const secrets = {

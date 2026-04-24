@@ -164,6 +164,7 @@ export class Lambdas extends Construct {
     // Fraud tracking (nonce-reuse tally) on x402 verification failures.
     tables.fraudTally.grantReadWriteData(this.fetchFn);
     tables.fraudEvents.grantReadWriteData(this.fetchFn);
+    tables.fetchCache.grantReadWriteData(this.fetchFn);
     secrets.agentWallet.grantRead(this.fetchFn);
     secrets.baseRpc.grantRead(this.fetchFn);
 

@@ -783,10 +783,10 @@ describe('X402Stack — API Gateway RequestValidators', () => {
 describe('X402Stack — DynamoDB point-in-time recovery', () => {
   const template = buildTemplate();
 
-  it('enables PITR on all 10 DynamoDB tables', () => {
+  it('enables PITR on all 11 DynamoDB tables', () => {
     const tables = template.findResources('AWS::DynamoDB::Table');
     const tableEntries = Object.values(tables);
-    expect(tableEntries.length).toBeGreaterThanOrEqual(10);
+    expect(tableEntries.length).toBeGreaterThanOrEqual(11);
     for (const table of tableEntries) {
       expect(table.Properties.PointInTimeRecoverySpecification).toEqual({
         PointInTimeRecoveryEnabled: true,
