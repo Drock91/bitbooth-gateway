@@ -5,6 +5,7 @@ const mockFetch = vi.fn();
 const mockIsCached = vi.fn();
 const mockAuthenticate = vi.fn();
 const mockEnforceRateLimit = vi.fn();
+const mockEnforceMonthlyQuota = vi.fn();
 const mockEnforceX402 = vi.fn();
 
 vi.mock('../../src/services/fetch.service.js', () => ({
@@ -17,6 +18,7 @@ vi.mock('../../src/middleware/auth.middleware.js', () => ({
 
 vi.mock('../../src/middleware/rate-limit.middleware.js', () => ({
   enforceRateLimit: (...a) => mockEnforceRateLimit(...a),
+  enforceMonthlyQuota: (...a) => mockEnforceMonthlyQuota(...a),
   rateLimitHeaders: (info) => ({
     'ratelimit-limit': String(info.limit),
     'ratelimit-remaining': String(info.remaining),
@@ -29,8 +31,10 @@ vi.mock('../../src/middleware/x402.middleware.js', () => ({
 }));
 
 import { postFetch } from '../../src/controllers/fetch.controller.js';
+import { RenderNotAllowedError } from '../../src/lib/errors.js';
 
 const defaultRlInfo = { limit: 100, remaining: 99, reset: 1 };
+const defaultQuotaInfo = { limit: 5000, used: 10, remaining: 4990 };
 
 function makeEvent(body, headers, sourceIp = '1.2.3.4') {
   return {
@@ -59,9 +63,11 @@ describe('postFetch', () => {
     mockIsCached.mockReset();
     mockAuthenticate.mockReset();
     mockEnforceRateLimit.mockReset();
+    mockEnforceMonthlyQuota.mockReset();
     mockEnforceX402.mockReset();
     mockIsCached.mockResolvedValue(false);
     mockEnforceRateLimit.mockResolvedValue(defaultRlInfo);
+    mockEnforceMonthlyQuota.mockResolvedValue(defaultQuotaInfo);
     mockEnforceX402.mockResolvedValue({ paid: true, txHash: '0xabc' });
   });
 
@@ -223,8 +229,9 @@ describe('postFetch', () => {
     });
 
     it('charges 4× for render mode ($0.02 USDC)', async () => {
+      mockAuthenticate.mockResolvedValueOnce({ accountId: 'acct-1', plan: 'starter' });
       mockFetch.mockResolvedValueOnce(fakeFetchResult);
-      await postFetch(makeEvent({ url: 'https://spa.com', mode: 'render' }));
+      await postFetch(makeEvent({ url: 'https://spa.com', mode: 'render' }, { 'x-api-key': 'k' }));
       expect(mockEnforceX402).toHaveBeenCalledWith(
         expect.objectContaining({
           route: expect.objectContaining({ amountWei: '20000' }),
@@ -287,10 +294,11 @@ describe('postFetch', () => {
     });
 
     it('charges reduced price when URL is cached (render mode)', async () => {
+      mockAuthenticate.mockResolvedValueOnce({ accountId: 'acct-1', plan: 'starter' });
       mockIsCached.mockResolvedValueOnce(true);
       mockFetch.mockResolvedValueOnce(fakeFetchResult);
 
-      await postFetch(makeEvent({ url: 'https://spa.com', mode: 'render' }));
+      await postFetch(makeEvent({ url: 'https://spa.com', mode: 'render' }, { 'x-api-key': 'k' }));
 
       expect(mockEnforceX402).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -358,6 +366,118 @@ describe('postFetch', () => {
           route: expect.objectContaining({ amountWei: '1000' }),
         }),
       );
+    });
+  });
+
+  describe('monthly quota enforcement', () => {
+    beforeEach(() => {
+      mockAuthenticate.mockResolvedValue({ accountId: 'acct-1', plan: 'starter' });
+    });
+
+    it('enforces monthly quota with accountId and plan', async () => {
+      mockFetch.mockResolvedValueOnce(fakeFetchResult);
+      await postFetch(makeEvent(validInput, { 'x-api-key': 'key-1' }));
+      expect(mockEnforceMonthlyQuota).toHaveBeenCalledWith('acct-1', 'starter');
+    });
+
+    it('returns x-monthly-quota-* headers on success', async () => {
+      mockFetch.mockResolvedValueOnce(fakeFetchResult);
+      const res = await postFetch(makeEvent(validInput, { 'x-api-key': 'key-1' }));
+      expect(res.headers['x-monthly-quota-limit']).toBe('5000');
+      expect(res.headers['x-monthly-quota-remaining']).toBe('4990');
+    });
+
+    it('propagates QuotaExceededError when quota exhausted', async () => {
+      mockEnforceMonthlyQuota.mockRejectedValueOnce(
+        new Error('Monthly quota exceeded — upgrade your plan'),
+      );
+      await expect(postFetch(makeEvent(validInput, { 'x-api-key': 'key-1' }))).rejects.toThrow(
+        'Monthly quota exceeded',
+      );
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('checks quota BEFORE parsing body', async () => {
+      const order = [];
+      mockEnforceMonthlyQuota.mockImplementationOnce(async () => {
+        order.push('quota');
+        return defaultQuotaInfo;
+      });
+      mockFetch.mockImplementationOnce(async () => {
+        order.push('fetch');
+        return fakeFetchResult;
+      });
+      await postFetch(makeEvent(validInput, { 'x-api-key': 'key-1' }));
+      expect(order[0]).toBe('quota');
+    });
+
+    it('uses free plan for anonymous callers', async () => {
+      mockAuthenticate.mockRejectedValue(new UnauthorizedError('missing'));
+      mockFetch.mockResolvedValueOnce(fakeFetchResult);
+      await postFetch(makeEvent(validInput, {}, '8.8.8.8'));
+      expect(mockEnforceMonthlyQuota).toHaveBeenCalledWith('anon:8.8.8.8', 'free');
+    });
+  });
+
+  describe('render mode gating (plan-based)', () => {
+    it('rejects render mode for free plan (anonymous)', async () => {
+      mockAuthenticate.mockRejectedValue(new UnauthorizedError('missing'));
+      await expect(
+        postFetch(makeEvent({ url: 'https://spa.com', mode: 'render' })),
+      ).rejects.toThrow(RenderNotAllowedError);
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('allows render mode for starter plan', async () => {
+      mockAuthenticate.mockResolvedValue({ accountId: 'acct-1', plan: 'starter' });
+      mockFetch.mockResolvedValueOnce(fakeFetchResult);
+      const res = await postFetch(
+        makeEvent({ url: 'https://spa.com', mode: 'render' }, { 'x-api-key': 'k' }),
+      );
+      expect(res.statusCode).toBe(200);
+    });
+
+    it('allows render mode for growth plan', async () => {
+      mockAuthenticate.mockResolvedValue({ accountId: 'acct-1', plan: 'growth' });
+      mockFetch.mockResolvedValueOnce(fakeFetchResult);
+      const res = await postFetch(
+        makeEvent({ url: 'https://spa.com', mode: 'render' }, { 'x-api-key': 'k' }),
+      );
+      expect(res.statusCode).toBe(200);
+    });
+
+    it('allows render mode for scale plan', async () => {
+      mockAuthenticate.mockResolvedValue({ accountId: 'acct-1', plan: 'scale' });
+      mockFetch.mockResolvedValueOnce(fakeFetchResult);
+      const res = await postFetch(
+        makeEvent({ url: 'https://spa.com', mode: 'render' }, { 'x-api-key': 'k' }),
+      );
+      expect(res.statusCode).toBe(200);
+    });
+
+    it('allows fast mode for free plan', async () => {
+      mockAuthenticate.mockRejectedValue(new UnauthorizedError('missing'));
+      mockFetch.mockResolvedValueOnce(fakeFetchResult);
+      const res = await postFetch(makeEvent({ url: 'https://example.com', mode: 'fast' }));
+      expect(res.statusCode).toBe(200);
+    });
+
+    it('allows full mode for free plan', async () => {
+      mockAuthenticate.mockRejectedValue(new UnauthorizedError('missing'));
+      mockFetch.mockResolvedValueOnce(fakeFetchResult);
+      const res = await postFetch(makeEvent({ url: 'https://example.com', mode: 'full' }));
+      expect(res.statusCode).toBe(200);
+    });
+
+    it('returns 403 with plan info in RenderNotAllowedError', async () => {
+      mockAuthenticate.mockRejectedValue(new UnauthorizedError('missing'));
+      try {
+        await postFetch(makeEvent({ url: 'https://spa.com', mode: 'render' }));
+      } catch (err) {
+        expect(err).toBeInstanceOf(RenderNotAllowedError);
+        expect(err.status).toBe(403);
+        expect(err.details.plan).toBe('free');
+      }
     });
   });
 });

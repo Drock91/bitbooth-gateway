@@ -67,19 +67,24 @@ function countFraudByWindow(events) {
 async function computeRevenueStats() {
   let mrr = 0;
   let payingCount = 0;
+  const mrrByPlan = { free: 0, starter: 0, growth: 0, scale: 0 };
+  const countByPlan = { free: 0, starter: 0, growth: 0, scale: 0 };
   let lastKey;
   do {
     const { items, lastKey: next } = await tenantsRepo.listAll(100, lastKey);
     for (const t of items) {
-      const price = PLAN_PRICES[t.plan] ?? 0;
+      const plan = t.plan ?? 'free';
+      const price = PLAN_PRICES[plan] ?? 0;
+      countByPlan[plan] = (countByPlan[plan] ?? 0) + 1;
       if (price > 0 && (t.status ?? 'active') === 'active') {
         mrr += price;
         payingCount++;
+        mrrByPlan[plan] = (mrrByPlan[plan] ?? 0) + price;
       }
     }
     lastKey = next;
   } while (lastKey);
-  return { mrr, payingCount };
+  return { mrr, payingCount, mrrByPlan, countByPlan };
 }
 
 export const metricsService = {
@@ -106,6 +111,8 @@ export const metricsService = {
     cached = {
       mrr: revenue.mrr,
       payingCount: revenue.payingCount,
+      mrrByPlan: revenue.mrrByPlan,
+      countByPlan: revenue.countByPlan,
       total402s: paymentStats.total402s,
       totalUsdc: paymentStats.totalUsdc,
       fetchesTotal: paymentStats.fetchesTotal,

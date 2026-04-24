@@ -4,17 +4,24 @@ vi.mock('../../src/repositories/rate-limit.repo.js', () => ({
   rateLimitRepo: { consume: vi.fn() },
 }));
 
+vi.mock('../../src/repositories/usage.repo.js', () => ({
+  usageRepo: { getForPeriod: vi.fn() },
+}));
+
 import {
   enforceRateLimit,
   enforceSignupRateLimit,
   enforceAdminRateLimit,
   enforceHealthRateLimit,
+  enforceMonthlyQuota,
   extractClientIp,
   PLAN_LIMITS,
+  MONTHLY_QUOTAS,
   rateLimitHeaders,
 } from '../../src/middleware/rate-limit.middleware.js';
 import { rateLimitRepo } from '../../src/repositories/rate-limit.repo.js';
-import { TooManyRequestsError } from '../../src/lib/errors.js';
+import { usageRepo } from '../../src/repositories/usage.repo.js';
+import { TooManyRequestsError, QuotaExceededError } from '../../src/lib/errors.js';
 
 const ACC = '550e8400-e29b-41d4-a716-446655440000';
 
@@ -284,6 +291,165 @@ describe('rate-limit.middleware', () => {
         expect(err.retryAfter).toBeGreaterThan(0);
         expect(err.limit).toBe(30);
       }
+    });
+  });
+
+  describe('MONTHLY_QUOTAS', () => {
+    it('defines quotas for all plan tiers', () => {
+      expect(MONTHLY_QUOTAS).toHaveProperty('free');
+      expect(MONTHLY_QUOTAS).toHaveProperty('starter');
+      expect(MONTHLY_QUOTAS).toHaveProperty('growth');
+      expect(MONTHLY_QUOTAS).toHaveProperty('scale');
+    });
+
+    it('free tier defaults to 100', () => {
+      expect(MONTHLY_QUOTAS.free).toBe(100);
+    });
+
+    it('starter tier defaults to 5000', () => {
+      expect(MONTHLY_QUOTAS.starter).toBe(5000);
+    });
+
+    it('growth tier defaults to 50000', () => {
+      expect(MONTHLY_QUOTAS.growth).toBe(50000);
+    });
+
+    it('scale tier defaults to 500000', () => {
+      expect(MONTHLY_QUOTAS.scale).toBe(500000);
+    });
+
+    it('each tier is strictly greater than the previous', () => {
+      expect(MONTHLY_QUOTAS.scale).toBeGreaterThan(MONTHLY_QUOTAS.growth);
+      expect(MONTHLY_QUOTAS.growth).toBeGreaterThan(MONTHLY_QUOTAS.starter);
+      expect(MONTHLY_QUOTAS.starter).toBeGreaterThan(MONTHLY_QUOTAS.free);
+    });
+  });
+
+  describe('enforceMonthlyQuota', () => {
+    beforeEach(() => {
+      vi.mocked(usageRepo.getForPeriod).mockReset();
+    });
+
+    it('returns quota info when under limit', async () => {
+      vi.mocked(usageRepo.getForPeriod).mockResolvedValueOnce({
+        accountId: ACC,
+        yearMonth: '2026-04',
+        callCount: 50,
+      });
+
+      const result = await enforceMonthlyQuota(ACC, 'free');
+      expect(result).toEqual({ limit: 100, used: 50, remaining: 50 });
+    });
+
+    it('throws QuotaExceededError when at limit', async () => {
+      vi.mocked(usageRepo.getForPeriod).mockResolvedValueOnce({
+        accountId: ACC,
+        yearMonth: '2026-04',
+        callCount: 100,
+      });
+
+      await expect(enforceMonthlyQuota(ACC, 'free')).rejects.toThrow(QuotaExceededError);
+    });
+
+    it('throws QuotaExceededError when over limit', async () => {
+      vi.mocked(usageRepo.getForPeriod).mockResolvedValueOnce({
+        accountId: ACC,
+        yearMonth: '2026-04',
+        callCount: 150,
+      });
+
+      await expect(enforceMonthlyQuota(ACC, 'free')).rejects.toThrow(QuotaExceededError);
+    });
+
+    it('uses correct quota for each plan tier', async () => {
+      vi.mocked(usageRepo.getForPeriod).mockResolvedValueOnce({
+        accountId: ACC,
+        yearMonth: '2026-04',
+        callCount: 4999,
+      });
+
+      const result = await enforceMonthlyQuota(ACC, 'starter');
+      expect(result).toEqual({ limit: 5000, used: 4999, remaining: 1 });
+    });
+
+    it('defaults unknown plans to free quota', async () => {
+      vi.mocked(usageRepo.getForPeriod).mockResolvedValueOnce({
+        accountId: ACC,
+        yearMonth: '2026-04',
+        callCount: 99,
+      });
+
+      const result = await enforceMonthlyQuota(ACC, 'enterprise');
+      expect(result.limit).toBe(100);
+    });
+
+    it('forces anon: accounts to free plan', async () => {
+      vi.mocked(usageRepo.getForPeriod).mockResolvedValueOnce({
+        accountId: 'anon:1.2.3.4',
+        yearMonth: '2026-04',
+        callCount: 99,
+      });
+
+      const result = await enforceMonthlyQuota('anon:1.2.3.4', 'growth');
+      expect(result.limit).toBe(100);
+    });
+
+    it('queries current yearMonth', async () => {
+      vi.mocked(usageRepo.getForPeriod).mockResolvedValueOnce({
+        accountId: ACC,
+        yearMonth: '2026-04',
+        callCount: 0,
+      });
+
+      await enforceMonthlyQuota(ACC, 'free');
+      const yearMonth = vi.mocked(usageRepo.getForPeriod).mock.calls[0][1];
+      expect(yearMonth).toMatch(/^\d{4}-\d{2}$/);
+    });
+
+    it('includes plan and limit details in QuotaExceededError', async () => {
+      vi.mocked(usageRepo.getForPeriod).mockResolvedValueOnce({
+        accountId: ACC,
+        yearMonth: '2026-04',
+        callCount: 100,
+      });
+
+      try {
+        await enforceMonthlyQuota(ACC, 'free');
+      } catch (err) {
+        expect(err).toBeInstanceOf(QuotaExceededError);
+        expect(err.status).toBe(429);
+        expect(err.details.plan).toBe('free');
+        expect(err.details.monthlyLimit).toBe(100);
+        expect(err.details.used).toBe(100);
+      }
+    });
+
+    it('propagates DDB errors', async () => {
+      vi.mocked(usageRepo.getForPeriod).mockRejectedValueOnce(new Error('DDB down'));
+
+      await expect(enforceMonthlyQuota(ACC, 'free')).rejects.toThrow('DDB down');
+    });
+
+    it('allows exactly limit - 1 calls', async () => {
+      vi.mocked(usageRepo.getForPeriod).mockResolvedValueOnce({
+        accountId: ACC,
+        yearMonth: '2026-04',
+        callCount: 99,
+      });
+
+      const result = await enforceMonthlyQuota(ACC, 'free');
+      expect(result.remaining).toBe(1);
+    });
+
+    it('handles zero usage', async () => {
+      vi.mocked(usageRepo.getForPeriod).mockResolvedValueOnce({
+        accountId: ACC,
+        yearMonth: '2026-04',
+        callCount: 0,
+      });
+
+      const result = await enforceMonthlyQuota(ACC, 'scale');
+      expect(result).toEqual({ limit: 500000, used: 0, remaining: 500000 });
     });
   });
 

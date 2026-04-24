@@ -8,6 +8,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- G-013 (partial): Monthly quota enforcement — plan-based monthly fetch limits (Free 100, Starter 5K, Growth 50K, Scale 500K), render mode gated to Starter+, x-monthly-quota-* response headers, MRR-by-plan breakdown in admin metrics. QuotaExceededError + RenderNotAllowedError types. Env vars `MONTHLY_QUOTA_FREE/STARTER/GROWTH/SCALE` configurable. 30 new tests
 - G-012 (partial): Per-route cache TTL — routes can now set `cacheTtlSeconds` (30–86400s) to override the global 5-min default. Schema, repo, fetch service, OpenAPI, and JSDoc all updated. 14 new tests (3,334 total)
 - G-012 (partial): Cache-aware x402 pricing — cache hits charged at 20% of full price (0.001 USDC fast/full, 0.004 USDC render). `fetchService.isCached()` check runs before x402 challenge so agents pay less for shared fetches. Env vars `SHARED_FETCH_PRICE_WEI` / `SHARED_RENDER_PRICE_WEI` configurable. 12 new tests (3,318 total)
 - G-022: Blog post "Shipping the first x402 MCP server" — ~1,500 words in `docs/blog/shipping-first-x402-mcp-server.md` covering protocol journey, build narrative, tx hash proof points, honest moat assessment, and revenue math. Ready for cross-posting to dev.to / Hashnode / heinrichstech.com

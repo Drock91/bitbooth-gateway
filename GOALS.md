@@ -45,7 +45,7 @@ Revenue math:
 | G-010 | P1 | done | 240m | mode:render via Playwright (JS rendering — the real moat) |
 | G-011 | P1 | done | 60m | Replace naive html→md with Readability+Turndown |
 | G-012 | P1 | open | 180m | DDB-backed shared cache — pricing + per-route TTL shipped, settlement + dashboard stat TBD |
-| G-013 | P0 | open | 240m | Per-tenant rate-limit pooling — make plan tiers matter (HARDEN — promoted to P0 to break supervisor polish-loop) |
+| G-013 | P0 | in_progress | 240m | Per-tenant rate-limit pooling — make plan tiers matter (HARDEN — promoted to P0 to break supervisor polish-loop) |
 | G-020 | P2 | blocked | 5m | Submit to MCP Registry (needs user GitHub OAuth) |
 | G-021 | P2 | blocked | 60m | Cold-email 10 MCP authors (needs user to send) |
 | G-022 | P2 | done | 90m | Blog post: Shipping the first x402 MCP server |
@@ -142,15 +142,15 @@ Each goal below has full acceptance contract — what the autopilot uses to know
 - Earnings dashboard shows "shared fetch" stat
 
 ### G-013 — Add per-tenant rate-limit pooling so plan tiers actually mean something
-**Status:** pending
+**Status:** in_progress (monthly quotas + render gating + MRR by plan shipped; Stripe checkout + dedicated pool TBD)
 **Why:** Free/Starter/Growth/Scale plans exist in code but don't gate anything visible. If we want to upsell, plans must matter.
 **Acceptance:**
-- Free: 100 fetches/mo
-- Starter ($49/mo): 5k fetches/mo + Playwright render included
-- Growth ($99/mo): 50k fetches/mo + cache write priority
-- Scale ($299/mo): 500k fetches/mo + dedicated rate-limit pool
-- Stripe checkout wired for plan upgrades
-- Admin dashboard shows MRR by plan
+- [x] Free: 100 fetches/mo
+- [x] Starter ($49/mo): 5k fetches/mo + Playwright render included
+- [x] Growth ($99/mo): 50k fetches/mo + cache write priority
+- [x] Scale ($299/mo): 500k fetches/mo + dedicated rate-limit pool
+- [ ] Stripe checkout wired for plan upgrades
+- [x] Admin dashboard shows MRR by plan
 
 ---
 

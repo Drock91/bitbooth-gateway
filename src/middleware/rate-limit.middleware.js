@@ -1,5 +1,6 @@
-import { TooManyRequestsError } from '../lib/errors.js';
+import { TooManyRequestsError, QuotaExceededError } from '../lib/errors.js';
 import { rateLimitRepo } from '../repositories/rate-limit.repo.js';
+import { usageRepo } from '../repositories/usage.repo.js';
 
 /** Tokens per minute by plan tier (configurable via env vars). */
 function buildPlanLimits() {
@@ -176,4 +177,38 @@ export async function enforceHealthRateLimit(clientIp) {
   }
 }
 
-export { PLAN_LIMITS };
+/** Monthly fetch quotas per plan (configurable via env vars). */
+function buildMonthlyQuotas() {
+  return {
+    free: Number(process.env.MONTHLY_QUOTA_FREE) || 100,
+    starter: Number(process.env.MONTHLY_QUOTA_STARTER) || 5000,
+    growth: Number(process.env.MONTHLY_QUOTA_GROWTH) || 50000,
+    scale: Number(process.env.MONTHLY_QUOTA_SCALE) || 500000,
+  };
+}
+
+const MONTHLY_QUOTAS = buildMonthlyQuotas();
+
+/**
+ * Enforce monthly fetch quota for a tenant based on their plan.
+ * Reads the current month's usage from DDB and rejects if the quota is exhausted.
+ *
+ * @param {string} accountId
+ * @param {string} plan
+ * @returns {Promise<{limit: number, used: number, remaining: number}>}
+ */
+export async function enforceMonthlyQuota(accountId, plan) {
+  if (accountId.startsWith('anon:')) plan = 'free';
+  const limit = MONTHLY_QUOTAS[plan] ?? MONTHLY_QUOTAS.free;
+  const yearMonth = new Date().toISOString().slice(0, 7);
+  const usage = await usageRepo.getForPeriod(accountId, yearMonth);
+  const used = usage.callCount;
+
+  if (used >= limit) {
+    throw new QuotaExceededError(plan, limit, used);
+  }
+
+  return { limit, used, remaining: limit - used };
+}
+
+export { PLAN_LIMITS, MONTHLY_QUOTAS };

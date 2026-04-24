@@ -42,6 +42,8 @@ describe('metricsService', () => {
       const result = await metricsService.getDashboard();
       expect(result).toHaveProperty('mrr');
       expect(result).toHaveProperty('payingCount');
+      expect(result).toHaveProperty('mrrByPlan');
+      expect(result).toHaveProperty('countByPlan');
       expect(result).toHaveProperty('total402s');
       expect(result).toHaveProperty('totalUsdc');
       expect(result).toHaveProperty('fetchesTotal');
@@ -244,6 +246,63 @@ describe('metricsService', () => {
       const result = await metricsService.getDashboard();
       expect(result.mrr).toBe(0);
       expect(result.payingCount).toBe(0);
+    });
+
+    it('breaks down MRR by plan tier', async () => {
+      mockListAll.mockResolvedValue({
+        items: [
+          { plan: 'starter', status: 'active' },
+          { plan: 'starter', status: 'active' },
+          { plan: 'growth', status: 'active' },
+          { plan: 'scale', status: 'active' },
+          { plan: 'free', status: 'active' },
+        ],
+        lastKey: undefined,
+      });
+      const result = await metricsService.getDashboard();
+      expect(result.mrrByPlan).toEqual({ free: 0, starter: 98, growth: 99, scale: 299 });
+      expect(result.mrr).toBe(496);
+    });
+
+    it('counts tenants by plan tier', async () => {
+      mockListAll.mockResolvedValue({
+        items: [
+          { plan: 'free', status: 'active' },
+          { plan: 'free', status: 'active' },
+          { plan: 'starter', status: 'active' },
+          { plan: 'growth', status: 'suspended' },
+        ],
+        lastKey: undefined,
+      });
+      const result = await metricsService.getDashboard();
+      expect(result.countByPlan).toEqual({ free: 2, starter: 1, growth: 1, scale: 0 });
+    });
+
+    it('excludes suspended tenants from mrrByPlan', async () => {
+      mockListAll.mockResolvedValue({
+        items: [
+          { plan: 'starter', status: 'active' },
+          { plan: 'starter', status: 'suspended' },
+        ],
+        lastKey: undefined,
+      });
+      const result = await metricsService.getDashboard();
+      expect(result.mrrByPlan.starter).toBe(49);
+    });
+
+    it('returns zero mrrByPlan on empty dataset', async () => {
+      const result = await metricsService.getDashboard();
+      expect(result.mrrByPlan).toEqual({ free: 0, starter: 0, growth: 0, scale: 0 });
+      expect(result.countByPlan).toEqual({ free: 0, starter: 0, growth: 0, scale: 0 });
+    });
+
+    it('defaults null plan to free in countByPlan', async () => {
+      mockListAll.mockResolvedValue({
+        items: [{ status: 'active' }],
+        lastKey: undefined,
+      });
+      const result = await metricsService.getDashboard();
+      expect(result.countByPlan.free).toBe(1);
     });
 
     it('fraud events exactly at 24h boundary count in 24h', async () => {

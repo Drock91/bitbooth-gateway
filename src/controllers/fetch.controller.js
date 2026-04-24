@@ -3,9 +3,13 @@ import { parseBody } from '../middleware/validate.middleware.js';
 import { FetchRequest } from '../validators/fetch.schema.js';
 import { jsonResponse } from '../middleware/error.middleware.js';
 import { authenticate } from '../middleware/auth.middleware.js';
-import { enforceRateLimit, rateLimitHeaders } from '../middleware/rate-limit.middleware.js';
+import {
+  enforceRateLimit,
+  enforceMonthlyQuota,
+  rateLimitHeaders,
+} from '../middleware/rate-limit.middleware.js';
 import { enforceX402 } from '../middleware/x402.middleware.js';
-import { UnauthorizedError } from '../lib/errors.js';
+import { UnauthorizedError, RenderNotAllowedError } from '../lib/errors.js';
 
 const FETCH_PRICE_WEI = process.env.FETCH_PRICE_WEI || '5000'; // 0.005 USDC
 const RENDER_PRICE_WEI = process.env.RENDER_PRICE_WEI || '20000'; // 0.02 USDC
@@ -43,10 +47,13 @@ export async function postFetch(event) {
   }
 
   const rlInfo = await enforceRateLimit(accountId, plan);
+  const quotaInfo = await enforceMonthlyQuota(accountId, plan);
 
-  // Parse body early so we know the mode before issuing an x402 challenge.
-  // render mode costs 4× more than fast/full.
   const input = parseBody(FetchRequest, event.body);
+
+  if (input.mode === 'render' && plan === 'free') {
+    throw new RenderNotAllowedError(plan);
+  }
 
   // Cache hits get a reduced "shared" price — the first fetcher paid full
   // price, subsequent agents within the TTL window pay ~20%.
@@ -56,7 +63,10 @@ export async function postFetch(event) {
   const result = await fetchService.fetch(input);
 
   const resp = jsonResponse(200, result);
-  Object.assign(resp.headers, rateLimitHeaders(rlInfo));
+  Object.assign(resp.headers, rateLimitHeaders(rlInfo), {
+    'x-monthly-quota-limit': String(quotaInfo.limit),
+    'x-monthly-quota-remaining': String(quotaInfo.remaining),
+  });
   return resp;
 }
 

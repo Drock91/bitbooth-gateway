@@ -47,6 +47,23 @@ export class TooManyRequestsError extends AppError {
   }
 }
 
+export class QuotaExceededError extends AppError {
+  constructor(plan, limit, used) {
+    super('QUOTA_EXCEEDED', 'Monthly quota exceeded — upgrade your plan', 429, {
+      plan,
+      monthlyLimit: limit,
+      used,
+    });
+    this.retryAfter = 0;
+  }
+}
+
+export class RenderNotAllowedError extends AppError {
+  constructor(plan) {
+    super('RENDER_NOT_ALLOWED', 'Render mode requires a Starter plan or above', 403, { plan });
+  }
+}
+
 export class FraudDetectedError extends AppError {
   constructor(details) {
     super('FRAUD_DETECTED', 'Fraudulent activity detected', 403, details);
